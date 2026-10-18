@@ -57,6 +57,14 @@ sections:
     badge_source:
       local: "notes"
 
+  - title: "檔案下載"
+    icon: "📎"
+    desc: "PDF、CSV、圖片等非 markdown 檔案"
+    type: file
+    url: "https://kilroy-utb.github.io/hub/files/"
+    badge_source:
+      local: "files"
+
   # === 純外連 ===
   - title: "k_gen GitHub Repo"
     icon: "🔗"

@@ -56,9 +56,9 @@ def _validate_config(cfg: dict, src: Path) -> dict:
         sec.setdefault("icon", "📄")
         sec.setdefault("desc", "")
         sec.setdefault("type", "wiki")
-        if sec["type"] not in ("gallery", "wiki", "todo", "external"):
+        if sec["type"] not in ("gallery", "wiki", "todo", "file", "external"):
             raise ValueError(f"{src}: section '{sec['title']}' has invalid type '{sec['type']}'")
-        # url 必填（gallery/wiki/todo/external 都要有，連到 Pages 絕對 URL）
+        # url 必填（gallery/wiki/todo/file/external 都要有，連到 Pages 絕對 URL）
         sec.setdefault("url", "#")
 
     return cfg
@@ -114,6 +114,18 @@ def _local_count_open_todos(workdir: Path, path: str) -> int:
     return n
 
 
+def _local_count_files(workdir: Path, path: str) -> int:
+    """算 path 下所有「非 .md 非 index.html」檔案"""
+    d = workdir / path
+    if not d.exists():
+        return 0
+    n = 0
+    for f in d.iterdir():
+        if f.is_file() and f.suffix.lower() not in (".md", ".html"):
+            n += 1
+    return n
+
+
 def compute_badges(sections: list, primary_workdir: Path, primary_repo: str) -> list:
     """
     badge_source 支援三種:
@@ -151,6 +163,8 @@ def compute_badges(sections: list, primary_workdir: Path, primary_repo: str) -> 
             sec["badge"] = _local_count_mds(wd, path)
         elif sec["type"] == "todo":
             sec["badge"] = _local_count_open_todos(wd, path)
+        elif sec["type"] == "file":
+            sec["badge"] = _local_count_files(wd, path)
         else:
             sec["badge"] = None
 
@@ -361,6 +375,8 @@ def render_hub_html(cfg: dict, repo: str) -> str:
                 badge_label = f"{sec['badge']} pics"
             elif sec["type"] == "wiki":
                 badge_label = f"{sec['badge']} files"
+            elif sec["type"] == "file":
+                badge_label = f"{sec['badge']} files"
             badge_html = f'<span class="badge">{badge_label}</span>'
         else:
             badge_html = ""
@@ -389,6 +405,295 @@ def render_hub_html(cfg: dict, repo: str) -> str:
         build_time=build_time,
         repo=repo or "your/repo",
     )
+
+
+# ---- Section landing page (wiki/todo/notes) ----
+
+SECTION_INDEX_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="{theme}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title} — {hub_title}</title>
+  <style>
+    :root {{
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: {accent};
+    }}
+    [data-theme="dark"] {{
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }}
+    .container {{ max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }}
+    nav.breadcrumb {{
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }}
+    nav.breadcrumb a {{ color: var(--accent); text-decoration: none; }}
+    header {{ margin-bottom: 32px; }}
+    h1 {{ font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }}
+    h1 .icon {{ font-size: 32px; }}
+    .desc {{ color: var(--muted); margin: 0 0 12px 0; }}
+    .actions {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
+    .actions a {{
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }}
+    .actions a:hover {{ background: var(--accent); color: white; border-color: var(--accent); }}
+    .search {{
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }}
+    .file-list {{ display: flex; flex-direction: column; gap: 8px; }}
+    .file-item {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }}
+    .file-item:hover {{ border-color: var(--accent); }}
+    .file-icon {{ font-size: 20px; }}
+    .file-name {{ flex: 1; font-weight: 500; }}
+    .file-meta {{ font-size: 12px; color: var(--muted); }}
+    .file-link {{
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }}
+    .empty {{
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }}
+    .theme-toggle {{
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }}
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="{hub_url}">← {hub_title}</a> / <span>{title}</span>
+    </nav>
+
+    <header>
+      <h1><span class="icon">{icon}</span> {title}</h1>
+      {desc_html}
+      <div class="actions">
+        {new_button}
+        <a href="{edit_folder_url}" target="_blank" rel="noopener">📁 資料夾</a>
+        {back_button}
+      </div>
+    </header>
+
+    <input type="text" class="search" id="search" placeholder="搜尋…">
+
+    <div class="file-list" id="file-list">
+      {items_html}
+    </div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const saved = localStorage.getItem('hub-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    document.getElementById('theme-toggle').addEventListener('click', () => {{
+      const cur = root.getAttribute('data-theme') || 'light';
+      const next = cur === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('hub-theme', next);
+    }});
+
+    const search = document.getElementById('search');
+    const items = Array.from(document.querySelectorAll('.file-item'));
+    search.addEventListener('input', (e) => {{
+      const q = e.target.value.toLowerCase();
+      let visible = 0;
+      items.forEach(it => {{
+        const match = !q || it.textContent.toLowerCase().includes(q);
+        it.style.display = match ? '' : 'none';
+        if (match) visible++;
+      }});
+      document.getElementById('empty-msg')?.remove();
+      if (visible === 0) {{
+        const empty = document.createElement('div');
+        empty.id = 'empty-msg';
+        empty.className = 'empty';
+        empty.textContent = '沒有符合的檔案。';
+        document.getElementById('file-list').appendChild(empty);
+      }}
+    }});
+  </script>
+</body>
+</html>
+"""
+
+
+FILE_ITEM_TEMPLATE = """      <div class="file-item">
+        <span class="file-icon">{icon}</span>
+        <span class="file-name">{name}</span>
+        <span class="file-meta">{meta}</span>
+        <a class="file-link" href="{href}" target="_blank" rel="noopener">{action_label}</a>
+      </div>"""
+
+
+def _icon_for_ext(ext: str) -> str:
+    return {
+        ".md": "📝",
+        ".png": "🖼️", ".jpg": "🖼️", ".jpeg": "🖼️", ".gif": "🖼️", ".webp": "🖼️", ".svg": "🖼️",
+        ".pdf": "📕",
+        ".csv": "📊", ".xlsx": "📊", ".xls": "📊",
+        ".docx": "📄", ".doc": "📄",
+        ".txt": "📃",
+        ".mp3": "🎵", ".wav": "🎵",
+        ".mp4": "🎬", ".mov": "🎬",
+        ".zip": "📦", ".tar": "📦", ".gz": "📦",
+    }.get(ext.lower(), "📄")
+
+
+def render_section_index_html(sec: dict, cfg: dict, hub_url: str, files: list, file_type: str) -> str:
+    """
+    產生 section landing page (e.g. wiki/index.html, todo/index.html)
+    files: list of (filename, ext, size_bytes)
+    file_type: 'md' (markdown) or 'file' (other)
+    """
+    # 從 section url 推導資料夾在 repo 內的路徑
+    # e.g. https://kilroy-utb.github.io/hub/wiki/ → wiki/
+    url = sec.get("url", "")
+    if "/hub/" in url:
+        path = url.split("/hub/", 1)[1].rstrip("/") + "/"
+    else:
+        path = sec.get("badge_source", {}).get("local", "unknown") if isinstance(sec.get("badge_source"), dict) else "unknown"
+
+    # 顯示每個檔案
+    items = []
+    for fname, ext, size in files:
+        icon = _icon_for_ext(ext)
+        meta = f"{ext[1:].upper()} · {size:,} bytes" if ext else f"{size:,} bytes"
+        if file_type == "md":
+            href = f"./{fname}"
+            action_label = "閱讀"
+        else:
+            href = f"./{fname}"
+            action_label = "下載"
+        items.append(FILE_ITEM_TEMPLATE.format(
+            icon=icon,
+            name=fname,
+            meta=meta,
+            href=href,
+            action_label=action_label,
+        ))
+
+    items_html = "\n".join(items) if items else '<div class="empty">這個資料夾還是空的。從 GitHub 編輯加第一個檔案吧 👇</div>'
+
+    desc_html = f'<p class="desc">{sec["desc"]}</p>' if sec.get("desc") else ""
+
+    # 「新增檔案」按鈕：直連 GitHub web editor
+    repo_name = "kilroy-utb/hub"
+    if isinstance(sec.get("badge_source"), dict) and "repo" in sec["badge_source"]:
+        repo_name = sec["badge_source"]["repo"]
+    new_button = f'<a href="https://github.com/{repo_name}/new/main/{path.rstrip("/")}?filename={path}new-file.md" target="_blank" rel="noopener">+ 新增檔案</a>'
+
+    edit_folder_url = f"https://github.com/kilroy-utb/hub/tree/main/{path.rstrip("/")}"
+
+    # 「返回 hub」按鈕
+    back_button = f'<a href="{hub_url}">← 回首頁</a>'
+
+    build_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " (GMT+8)"
+
+    return SECTION_INDEX_TEMPLATE.format(
+        title=sec["title"],
+        hub_title=cfg["title"],
+        hub_url=hub_url,
+        icon=sec.get("icon", "📄"),
+        desc_html=desc_html,
+        new_button=new_button,
+        edit_folder_url=edit_folder_url,
+        back_button=back_button,
+        items_html=items_html,
+        theme=cfg.get("theme", "light"),
+        accent=cfg.get("accent", "#1976d2"),
+    )
+
+
+def collect_section_files(workdir: Path, path: str, sec_type: str) -> tuple[list, str]:
+    """
+    掃描 section 資料夾，回傳 (files, file_type)
+    files = [(filename, ext, size_bytes), ...]
+    file_type = 'md' 或 'file'
+    """
+    d = workdir / path
+    if not d.exists():
+        return [], "md"
+
+    if sec_type in ("wiki", "todo"):
+        # 只列 .md，跳過 index.md
+        files = []
+        for f in sorted(d.glob("*.md")):
+            if f.name == "index.md":
+                continue
+            files.append((f.name, ".md", f.stat().st_size))
+        return files, "md"
+    elif sec_type == "file":
+        # 列所有非 .md / .html 檔
+        files = []
+        for f in sorted(d.iterdir()):
+            if not f.is_file():
+                continue
+            ext = f.suffix
+            if ext.lower() in (".md", ".html"):
+                continue
+            files.append((f.name, ext, f.stat().st_size))
+        return files, "file"
+    else:
+        return [], "md"
 
 
 # ---- Git ops ----
@@ -499,9 +804,59 @@ def cmd_build(args):
         out = Path(args.output or "index.html")
         out.write_text(html, encoding="utf-8")
         print(f"[hub] wrote: {out}")
+
+        # 本機模式也生成 section index.html（不 push）
+        hub_url = f"https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/"
+        for sec in cfg["sections"]:
+            if sec["type"] not in ("wiki", "todo", "file"):
+                continue
+            bs = sec.get("badge_source", {})
+            if isinstance(bs, dict) and "local" in bs:
+                path = bs["local"]
+            elif isinstance(bs, str):
+                path = bs
+            else:
+                url = sec.get("url", "")
+                path = url.split(f"/{repo.split('/')[1]}/", 1)[-1].rstrip("/") if f"/{repo.split('/')[1]}/" in url else ""
+            if not path:
+                continue
+            files, file_type = collect_section_files(Path.cwd(), path, sec["type"])
+            sec_html = render_section_index_html(sec, cfg, hub_url, files, file_type)
+            sec_index_path = Path.cwd() / path / "index.html"
+            sec_index_path.parent.mkdir(parents=True, exist_ok=True)
+            sec_index_path.write_text(sec_html, encoding="utf-8")
+            print(f"  wrote: {path.rstrip('/')}/index.html  ({len(files)} files)")
     else:
         out_path = workdir / (args.output or "index.html")
         out_path.write_text(html, encoding="utf-8")
+
+        # 給每個 wiki/todo/file section 生成 landing page
+        hub_url = f"https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/"
+        for sec in cfg["sections"]:
+            if sec["type"] not in ("wiki", "todo", "file"):
+                continue
+
+            # 決定資料夾路徑（在 repo 內）
+            bs = sec.get("badge_source", {})
+            if isinstance(bs, dict) and "local" in bs:
+                path = bs["local"]
+            elif isinstance(bs, str):
+                path = bs
+            else:
+                # 從 url 推導
+                url = sec.get("url", "")
+                path = url.split(f"/{repo.split('/')[1]}/", 1)[-1].rstrip("/") if f"/{repo.split('/')[1]}/" in url else ""
+            if not path:
+                print(f"  skip landing: {sec['title']} (no path)")
+                continue
+
+            files, file_type = collect_section_files(workdir, path, sec["type"])
+            sec_html = render_section_index_html(sec, cfg, hub_url, files, file_type)
+            sec_index_path = workdir / path / "index.html"
+            sec_index_path.parent.mkdir(parents=True, exist_ok=True)
+            sec_index_path.write_text(sec_html, encoding="utf-8")
+            print(f"  wrote: {path.rstrip('/')}/index.html  ({len(files)} files)")
+
         ok = commit_and_push(workdir, branch, "hub: regenerate index.html")
         if not ok:
             print("[hub] WARNING: commit/push failed, but HTML is in repo", file=sys.stderr)

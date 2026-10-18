@@ -16,3 +16,5 @@
 - [ ] 接 Obsidian vault
 - [ ] 跨 repo badge 自動化
 - [ ] 深色模式微調
+
+- [ ] workflow 測試項目
