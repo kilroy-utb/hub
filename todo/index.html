@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo — Kilroy's Hub</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> / <span>Todo</span>
+    </nav>
+
+    <header>
+      <h1><span class="icon">✅</span> Todo</h1>
+      <p class="desc">待辦清單與進行中項目</p>
+      <div class="actions">
+        <a href="https://github.com/kilroy-utb/hub/new/main/todo?filename=todo/new-file.md" target="_blank" rel="noopener">+ 新增檔案</a>
+        <a href="https://github.com/kilroy-utb/hub/tree/main/todo" target="_blank" rel="noopener">📁 資料夾</a>
+        <a href="https://kilroy-utb.github.io/hub/">← 回首頁</a>
+      </div>
+    </header>
+
+    <input type="text" class="search" id="search" placeholder="搜尋…">
+
+    <div class="file-list" id="file-list">
+            <div class="file-item">
+        <span class="file-icon">📝</span>
+        <span class="file-name">today.md</span>
+        <span class="file-meta">MD · 318 bytes</span>
+        <a class="file-link" href="./today.md" target="_blank" rel="noopener">閱讀</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const saved = localStorage.getItem('hub-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme') || 'light';
+      const next = cur === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('hub-theme', next);
+    });
+
+    const search = document.getElementById('search');
+    const items = Array.from(document.querySelectorAll('.file-item'));
+    search.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      let visible = 0;
+      items.forEach(it => {
+        const match = !q || it.textContent.toLowerCase().includes(q);
+        it.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      document.getElementById('empty-msg')?.remove();
+      if (visible === 0) {
+        const empty = document.createElement('div');
+        empty.id = 'empty-msg';
+        empty.className = 'empty';
+        empty.textContent = '沒有符合的檔案。';
+        document.getElementById('file-list').appendChild(empty);
+      }
+    });
+  </script>
+</body>
+</html>
