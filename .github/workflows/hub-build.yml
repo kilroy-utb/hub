@@ -1,0 +1,48 @@
+name: Rebuild hub
+
+# 任何 push 到 main 都觸發 rebuild index.html
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # 允許手動從 GitHub UI 觸發
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要歷史才能算 badge
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      - name: Run hub build
+        env:
+          # 跨 repo badge clone 用 https（runner 在 GitHub 內網，public repo 不需 token）
+          GIT_TERMINAL_PROMPT: '0'
+        run: |
+          python3 .hermes/skills/hub/scripts/hub.py build \
+            --repo kilroy-utb/hub \
+            --branch main \
+            --workdir /tmp/hub-workdir
+
+      - name: Push index.html
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.email "hub-bot@users.noreply.github.com"
+            git config user.name "hub-bot"
+            git add index.html
+            git commit -m "hub: auto-regenerate index.html"
+            git push
+          else
+            echo "no changes"
+          fi

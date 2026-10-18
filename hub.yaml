@@ -17,26 +17,14 @@ external_pages:
   knowledge_base: "https://kilroy-utb.github.io/knowledge_base"
 
 sections:
-  # === k_gen 跑的 gallery（外部 repo） ===
-  - title: "成語四格漫畫"
-    icon: "📚"
-    desc: "用四格漫畫學成語，k_gen 自動生成"
-    type: gallery
-    url: "https://kilroy-utb.github.io/knowledge_base/comics/proverb/"
-    badge_source:
-      repo: "kilroy-utb/knowledge_base"
-      path: "comics/proverb"
+  # === k_gen 跑的 gallery（外部 repo，已隱藏 2026-10-18 — 不在 hub 顯示）
+  # - title: "成語四格漫畫"
+  #   icon: "📚"
+  #   ...
+  # - title: "生物四格漫畫"
+  #   ...
 
-  - title: "生物四格漫畫"
-    icon: "🧬"
-    desc: "國中生物的視覺化教材"
-    type: gallery
-    url: "https://kilroy-utb.github.io/knowledge_base/comics/biology/"
-    badge_source:
-      repo: "kilroy-utb/knowledge_base"
-      path: "comics/biology"
-
-  # === hub repo 內的 section（用 ./ 相對路徑或絕對） ===
+  # === hub repo 內的 section ===
   - title: "Wiki 知識庫"
     icon: "📖"
     desc: "自建的 markdown wiki"
