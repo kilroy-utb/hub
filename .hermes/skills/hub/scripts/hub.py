@@ -641,7 +641,7 @@ def render_section_index_html(sec: dict, cfg: dict, hub_url: str, files: list, f
         repo_name = sec["badge_source"]["repo"]
     new_button = f'<a href="https://github.com/{repo_name}/new/main/{path.rstrip("/")}?filename={path}new-file.md" target="_blank" rel="noopener">+ 新增檔案</a>'
 
-    edit_folder_url = f"https://github.com/kilroy-utb/hub/tree/main/{path.rstrip("/")}"
+    edit_folder_url = f"https://github.com/kilroy-utb/hub/tree/main/{path.rstrip('/')}"
 
     # 「返回 hub」按鈕
     back_button = f'<a href="{hub_url}">← 回首頁</a>'
