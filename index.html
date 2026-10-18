@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kilroy's Hub</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+    header { text-align: center; margin-bottom: 40px; }
+    h1 { font-size: 32px; margin: 0 0 8px 0; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 0; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .search {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+    }
+    .theme-toggle {
+      padding: 8px 16px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .theme-toggle:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-decoration: none;
+      color: var(--card-fg);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-color: var(--accent);
+    }
+    .card-header { display: flex; align-items: center; gap: 10px; }
+    .icon { font-size: 28px; }
+    .card-title { font-size: 17px; font-weight: 600; flex: 1; margin: 0; }
+    .badge {
+      background: var(--accent);
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .desc { color: var(--muted); font-size: 13px; margin: 0; }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      grid-column: 1 / -1;
+    }
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Kilroy's Hub</h1>
+      <p class="subtitle">個人知識、漫畫、財經、待辦的入口</p>
+    </header>
+
+    <div class="controls">
+      <input type="text" class="search" id="search" placeholder="搜尋 section…">
+      <button class="theme-toggle" id="theme-toggle">🌙 切換主題</button>
+    </div>
+
+    <div class="grid" id="grid">
+            <a class="card" href="https://kilroy-utb.github.io/knowledge_base/comics/proverb/">
+        <div class="card-header">
+          <span class="icon">📚</span>
+          <h2 class="card-title">成語四格漫畫</h2>
+          <span class="badge">254 pics</span>
+        </div>
+        <p class="desc">用四格漫畫學成語，k_gen 自動生成</p>
+      </a>
+      <a class="card" href="https://kilroy-utb.github.io/knowledge_base/comics/biology/">
+        <div class="card-header">
+          <span class="icon">🧬</span>
+          <h2 class="card-title">生物四格漫畫</h2>
+          <span class="badge">0 pics</span>
+        </div>
+        <p class="desc">國中生物的視覺化教材</p>
+      </a>
+      <a class="card" href="https://kilroy-utb.github.io/hub/wiki/">
+        <div class="card-header">
+          <span class="icon">📖</span>
+          <h2 class="card-title">Wiki 知識庫</h2>
+          <span class="badge">1 files</span>
+        </div>
+        <p class="desc">自建的 markdown wiki</p>
+      </a>
+      <a class="card" href="https://kilroy-utb.github.io/hub/wiki/finance/">
+        <div class="card-header">
+          <span class="icon">💰</span>
+          <h2 class="card-title">財經筆記</h2>
+          <span class="badge">0 files</span>
+        </div>
+        <p class="desc">持股追蹤、研究筆記、TSLA/0050 等</p>
+      </a>
+      <a class="card" href="https://kilroy-utb.github.io/hub/todo/">
+        <div class="card-header">
+          <span class="icon">✅</span>
+          <h2 class="card-title">Todo</h2>
+          <span class="badge">5 open</span>
+        </div>
+        <p class="desc">待辦清單與進行中項目</p>
+      </a>
+      <a class="card" href="https://kilroy-utb.github.io/hub/notes/">
+        <div class="card-header">
+          <span class="icon">📝</span>
+          <h2 class="card-title">雜項筆記</h2>
+          <span class="badge">1 files</span>
+        </div>
+        <p class="desc">什麼都先丟這裡</p>
+      </a>
+      <a class="card" href="https://github.com/kilroy-utb/knowledge_base" target="_blank" rel="noopener">
+        <div class="card-header">
+          <span class="icon">🔗</span>
+          <h2 class="card-title">k_gen GitHub Repo</h2>
+          
+        </div>
+        <p class="desc">原始檔案與所有 commit（漫畫 repo）</p>
+      </a>
+    </div>
+
+    <footer>
+      Last build: 2026-10-18 16:46:10 (GMT+8)<br>
+      <a href="https://github.com/kilroy-utb/hub" target="_blank" rel="noopener">GitHub repo</a>
+    </footer>
+  </div>
+
+  <script>
+    // theme
+    const root = document.documentElement;
+    const saved = localStorage.getItem('hub-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme') || 'light';
+      const next = cur === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('hub-theme', next);
+    });
+
+    // search
+    const search = document.getElementById('search');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    search.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      let visible = 0;
+      cards.forEach(c => {
+        const text = c.textContent.toLowerCase();
+        const match = !q || text.includes(q);
+        c.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      document.getElementById('empty')?.remove();
+      if (visible === 0) {
+        const empty = document.createElement('div');
+        empty.id = 'empty';
+        empty.className = 'empty';
+        empty.textContent = '沒有符合的 section。';
+        document.getElementById('grid').appendChild(empty);
+      }
+    });
+  </script>
+</body>
+</html>
