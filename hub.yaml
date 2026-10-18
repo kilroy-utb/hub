@@ -1,0 +1,77 @@
+# hub.yaml 範例
+# 放在 repo 根目錄，例如 kilroy-utb/hub/hub.yaml
+#
+# 重要：section 連結用「絕對 URL」(連到其他 repo 的 GitHub Pages)
+# 這樣 hub repo 跟 k_gen repo 可以分開，互不干擾
+
+title: "Kilroy's Hub"
+subtitle: "個人知識、漫畫、財經、待辦的入口"
+theme: "light"
+accent: "#1976d2"
+
+# GitHub Pages base URL（hub repo 本身的）
+pages_base: "https://kilroy-utb.github.io/hub"
+
+# 外部 repo 的 Pages base（k_gen 跑在那邊）
+external_pages:
+  knowledge_base: "https://kilroy-utb.github.io/knowledge_base"
+
+sections:
+  # === k_gen 跑的 gallery（外部 repo） ===
+  - title: "成語四格漫畫"
+    icon: "📚"
+    desc: "用四格漫畫學成語，k_gen 自動生成"
+    type: gallery
+    url: "https://kilroy-utb.github.io/knowledge_base/comics/proverb/"
+    badge_source:
+      repo: "kilroy-utb/knowledge_base"
+      path: "comics/proverb"
+
+  - title: "生物四格漫畫"
+    icon: "🧬"
+    desc: "國中生物的視覺化教材"
+    type: gallery
+    url: "https://kilroy-utb.github.io/knowledge_base/comics/biology/"
+    badge_source:
+      repo: "kilroy-utb/knowledge_base"
+      path: "comics/biology"
+
+  # === hub repo 內的 section（用 ./ 相對路徑或絕對） ===
+  - title: "Wiki 知識庫"
+    icon: "📖"
+    desc: "自建的 markdown wiki"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/"
+    badge_source:
+      local: "wiki"
+
+  - title: "財經筆記"
+    icon: "💰"
+    desc: "持股追蹤、研究筆記、TSLA/0050 等"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/finance/"
+    badge_source:
+      local: "wiki/finance"
+
+  - title: "Todo"
+    icon: "✅"
+    desc: "待辦清單與進行中項目"
+    type: todo
+    url: "https://kilroy-utb.github.io/hub/todo/"
+    badge_source:
+      local: "todo"
+
+  - title: "雜項筆記"
+    icon: "📝"
+    desc: "什麼都先丟這裡"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/notes/"
+    badge_source:
+      local: "notes"
+
+  # === 純外連 ===
+  - title: "k_gen GitHub Repo"
+    icon: "🔗"
+    desc: "原始檔案與所有 commit（漫畫 repo）"
+    type: external
+    url: "https://github.com/kilroy-utb/knowledge_base"
