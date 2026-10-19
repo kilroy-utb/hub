@@ -15,6 +15,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -24,23 +25,25 @@ jobs:
       - name: Install pyyaml
         run: pip install pyyaml
 
-      - name: Run hub build
+      - name: Run hub build (local mode, no push)
         env:
           GIT_TERMINAL_PROMPT: '0'
         run: |
           python3 .hermes/skills/hub/scripts/hub.py build \
-            --repo kilroy-utb/hub \
-            --branch main \
-            --workdir /tmp/hub-workdir
+            --no-push \
+            --output ./index.html
 
-      - name: Push index.html
+      - name: Show what changed
+        run: git status --porcelain
+
+      - name: Commit and push changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.email "hub-bot@users.noreply.github.com"
             git config user.name "hub-bot"
-            git add index.html
+            git add -A
             git commit -m "hub: auto-regenerate index.html"
             git push
           else
-            echo "no changes"
+            echo "no changes to commit"
           fi
