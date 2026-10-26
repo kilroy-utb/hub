@@ -41,6 +41,12 @@ sections:
     badge_source:
       local: "wiki/finance"
 
+  - title: "AI 技術統整"
+    icon: "🤖"
+    desc: "模型進展、Local LLM、Agent 與 Skill 生態"
+    type: external
+    url: "https://kilroy-utb.github.io/ai-tech-digest"
+
   - title: "Todo"
     icon: "✅"
     desc: "待辦清單與進行中項目"
