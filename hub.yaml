@@ -15,6 +15,7 @@ pages_base: "https://kilroy-utb.github.io/hub"
 # 外部 repo 的 Pages base（k_gen 跑在那邊）
 external_pages:
   knowledge_base: "https://kilroy-utb.github.io/knowledge_base"
+  ai_tech_digest: "https://kilroy-utb.github.io/ai-tech-digest"
 
 sections:
   # === k_gen 跑的 gallery（外部 repo，已隱藏 2026-10-18 — 不在 hub 顯示）
