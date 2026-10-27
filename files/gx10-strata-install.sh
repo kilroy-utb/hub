@@ -26,7 +26,7 @@
 set -uo pipefail
 
 # 腳本版本：改了內容請一併 bump，現場對版本時看這行
-SCRIPT_VERSION="2026-10-27.4"
+SCRIPT_VERSION="2026-10-27.5"
 
 # ---------------------------------------------------------------- 設定值
 STRATA_DIR="${STRATA_DIR:-$HOME/Strata}"
@@ -170,6 +170,7 @@ step1_clone() {
   fi
   ok "已鎖定 commit：$(git rev-parse HEAD)"
   info "（記錄這個 SHA，日後要回滾就靠它）"
+  chmod +x setup.sh 2>/dev/null
   step_end
 }
 
@@ -188,6 +189,22 @@ step2_deps() {
     die "請先裝好 CUDA 13 toolkit 再續跑（用 --from 2 從這裡繼續）"
   fi
   ok "CUDA toolkit：$(nvcc --version | grep -oE 'release [0-9.]+' | head -1)"
+
+  # Debian/Ubuntu 把 ensurepip 放在 python3-venv 套件裡，沒裝的話 venv 建出來是空的（沒有 pip）
+  if ! python3 -c 'import ensurepip' >/dev/null 2>&1; then
+    warn "ensurepip 不可用（python3-venv 沒裝好）"
+    info "請執行：sudo apt-get install -y python3-venv python3.12-venv"
+    die "裝好後用 --from 2 續跑"
+  fi
+
+  # Strata 的 Python 環境放在 Strata 資料夾內的 .venv/
+  # （Ubuntu 24.04 的系統 Python 是 externally-managed，PEP 668 不允許全域 pip；
+  #   官方 setup.sh 也是這樣做的：「system Python stays untouched」）
+  if [ ! -x "$STRATA_DIR/.venv/bin/python" ]; then
+    info "建立私有 Python 環境 $STRATA_DIR/.venv"
+    python3 -m venv "$STRATA_DIR/.venv" || die "建立 .venv 失敗（需要 python3-venv）"
+  fi
+  ok "venv 就緒：$("$STRATA_DIR/.venv/bin/python" -V 2>&1)"
   step_end
 }
 
@@ -204,7 +221,9 @@ step3_build() {
   # 沒有它，-DSTRATA_GGML_DIR 會指到不存在的路徑；先讓 setup.py 抓一份 pinned 版本。
   if [ ! -d "$STRATA_DIR/third_party/llama.cpp/ggml" ]; then
     info "抓取 pinned llama.cpp 原始碼（setup.py 的 get_llama_cpp）…"
-    if python3 -c "import importlib.util,pathlib;s=importlib.util.spec_from_file_location('st',pathlib.Path('setup.py'));m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print(m.get_llama_cpp())"; then
+    local prepy="python3"
+    [ -x "$STRATA_DIR/.venv/bin/python" ] && prepy="$STRATA_DIR/.venv/bin/python"
+    if (cd "$STRATA_DIR" && "$prepy" -c "import importlib.util,pathlib;s=importlib.util.spec_from_file_location('st',pathlib.Path('setup.py'));m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print(m.get_llama_cpp())"); then
       ok "llama.cpp 原始碼就緒"
     else
       warn "抓取 llama.cpp 失敗，改讓 cmake 自己 FetchContent（會多花幾分鐘）"
@@ -255,7 +274,16 @@ step4_model() {
 
   local extra=()
   [ -n "$API_KEY" ] && extra+=(--api-key "$API_KEY")
-  python3 setup.py \
+  # 走官方 setup.sh：它會確保 .venv 存在，再以 .venv 的 python 執行 setup.py
+  local runner=()
+  if [ -x "$STRATA_DIR/setup.sh" ]; then
+    runner=("$STRATA_DIR/setup.sh")
+  elif [ -x "$STRATA_DIR/.venv/bin/python" ]; then
+    runner=("$STRATA_DIR/.venv/bin/python" "$STRATA_DIR/setup.py")
+  else
+    die "找不到 setup.sh 或 .venv，請先跑步驟 2（--from 2）"
+  fi
+  "${runner[@]}" \
     --model "$MODEL" \
     --context "$CTX" \
     --kv int8 \
