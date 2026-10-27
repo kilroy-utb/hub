@@ -230,6 +230,7 @@ step4_model() {
   cd "$STRATA_DIR" || die "進不去 $STRATA_DIR"
   info "下載量約 90 GB（pack 54.8 + PLE n-gram 表 28.8 + MTP draft 6）"
   info "設定：$MODEL / context $CTX / KV int8 / 併發 4（官方實測設定）"
+  info "MTP 推測解碼由 setup.py 自動抓取與啟用，不需要額外參數"
   local extra=()
   [ -n "$API_KEY" ] && extra+=(--api-key "$API_KEY")
   python3 setup.py \
@@ -237,12 +238,12 @@ step4_model() {
     --context "$CTX" \
     --kv int8 \
     --parallel 4 \
-    --mtp on \
     --cuda 13 \
     --build \
     --data-dir "$DATA_DIR" \
     --host "$API_HOST" \
     --port "$PORT" \
+    --no-browser \
     --no-start \
     --yes \
     "${extra[@]}" || die "setup.py 失敗"
