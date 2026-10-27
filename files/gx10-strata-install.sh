@@ -148,13 +148,23 @@ step1_clone() {
   esac
   if [ -d "$STRATA_DIR/.git" ]; then
     info "已存在 $STRATA_DIR，改為切換到指定版本"
+    cd "$STRATA_DIR" || die "進不去 $STRATA_DIR"
+    git fetch --all --tags >/dev/null 2>&1
+    git checkout "$BRANCH_SHA" || die "checkout $BRANCH_SHA 失敗"
   else
+    if [ -d "$STRATA_DIR" ]; then
+      # 資料夾已存在但不是 git repo（例如抓 zip 解壓的）→ 搬到旁邊保留，不刪任何東西
+      local backup="${STRATA_DIR}.pre-$(date +%Y%m%d-%H%M%S)"
+      warn "$STRATA_DIR 已存在，但不是 git repo"
+      info "裡面有：$(ls -A "$STRATA_DIR" 2>/dev/null | head -8 | tr '\n' ' ')"
+      info "搬到 $backup 保留（不刪除），再重新 clone"
+      mv "$STRATA_DIR" "$backup" || die "搬移失敗（可能是權限問題）"
+    fi
     git clone "$BRANCH_REPO" "$STRATA_DIR" || die "clone 失敗"
     ok "clone 完成"
+    cd "$STRATA_DIR" || die "進不去 $STRATA_DIR"
+    git checkout "$BRANCH_SHA" || die "checkout $BRANCH_SHA 失敗"
   fi
-  cd "$STRATA_DIR" || die "進不去 $STRATA_DIR"
-  git fetch --all --tags >/dev/null 2>&1
-  git checkout "$BRANCH_SHA" || die "checkout $BRANCH_SHA 失敗"
   ok "已鎖定 commit：$(git rev-parse HEAD)"
   info "（記錄這個 SHA，日後要回滾就靠它）"
   step_end
@@ -186,13 +196,29 @@ step3_build() {
   info "  -DCMAKE_CUDA_ARCHITECTURES=121   （專案預設是 120，GB10 是 sm_121）"
   info "  -DGGML_CPU_ARM_ARCH=armv8.6-a+dotprod+i8mm+fp16   （-mcpu=native 在 big.LITTLE 上失效）"
   info "  -DSTRATA_GGML_DIR=third_party/llama.cpp"
+
+  # llama.cpp 原始碼是 setup.py 另外抓的 zip（不是 submodule）。
+  # 沒有它，-DSTRATA_GGML_DIR 會指到不存在的路徑；先讓 setup.py 抓一份 pinned 版本。
+  if [ ! -d "$STRATA_DIR/third_party/llama.cpp/ggml" ]; then
+    info "抓取 pinned llama.cpp 原始碼（setup.py 的 get_llama_cpp）…"
+    if python3 -c "import importlib.util,pathlib;s=importlib.util.spec_from_file_location('st',pathlib.Path('setup.py'));m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print(m.get_llama_cpp())"; then
+      ok "llama.cpp 原始碼就緒"
+    else
+      warn "抓取 llama.cpp 失敗，改讓 cmake 自己 FetchContent（會多花幾分鐘）"
+    fi
+  else
+    ok "llama.cpp 原始碼已存在"
+  fi
+
   cmake -G Ninja -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DSTRATA_ENABLE_CUDA=ON \
     -DSTRATA_BUILD_TESTS=OFF \
     -DCMAKE_CUDA_ARCHITECTURES=121 \
-    -DSTRATA_GGML_DIR=third_party/llama.cpp \
     -DGGML_CPU_ARM_ARCH=armv8.6-a+dotprod+i8mm+fp16 || die "cmake 設定失敗"
+  if [ -d "$STRATA_DIR/third_party/llama.cpp/ggml" ]; then
+    cmake -S . -B build -DSTRATA_GGML_DIR=third_party/llama.cpp || die "cmake 設定失敗"
+  fi
   cmake --build build --target strata -j"$(nproc)" || die "編譯失敗"
   ok "引擎編譯完成：$(./build/strata --version 2>&1 | head -1)"
   step_end
