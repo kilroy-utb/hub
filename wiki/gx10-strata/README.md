@@ -70,6 +70,7 @@ bash gx10-strata-install.sh --from 3       # 從第 3 步開始
 bash gx10-strata-install.sh --skip 6,7     # 跳過指定步驟（逗號分隔）
 bash gx10-strata-install.sh --resume       # 自動跳過已完成的步驟
 bash gx10-strata-install.sh --no-systemd   # 不建立 systemd（手動啟動用）
+bash gx10-strata-install.sh --diag         # 只做記憶體診斷：誰占掉了記憶體
 ```
 
 `--resume` 靠 `$STRATA_DIR/.install-state/stepN.done` 標記檔判斷中斷在哪。
@@ -88,6 +89,26 @@ bash gx10-strata-install.sh --no-systemd   # 不建立 systemd（手動啟動用
 | `BRANCH_REPO` | ccatzin-zumwalt/Strata | 程式碼來源 |
 | `BRANCH_SHA` | `ce16205d…` | 鎖定的 commit |
 | `UMA_HEADROOM_GIB` | `8` | 統一記憶體留給 OS 的餘裕 |
+
+### 記憶體門檻說明
+
+GX10 是 128 GB，但引擎實際能用的是 **MemAvailable**（可立即動用的記憶體），不是 MemTotal。
+`setup.py` 用 MemTotal（128 GiB）做判斷，引擎則用 **MemAvailable − 6 GiB** 決定 expert cache 要多大——
+兩者落差太大時，記憶體不夠會讓 cache 塞不下，**CPU 接手算 expert，速度直接掉 4.2 倍**。
+
+| MemAvailable | 判定 | 動作 |
+|---|---|---|
+| ≥ 115 GiB | 充裕 | 全套，含 `--ple-io ram`（prompt 快 9–18%） |
+| 90–115 GiB | 堪用 | 照裝，但 **PLE 留在 SSD**，prompt 慢 9–18% |
+| < 90 GiB | 不安全 | 先釋放記憶體，否則可能 OOM 或掉進 CPU fallback |
+
+```bash
+# 看是誰占掉記憶體
+bash gx10-strata-install.sh --diag
+```
+
+常見吃貨：還在跑的 Ollama / llama-server（你原本的 30B coder、27B）、Docker 容器、
+NVIDIA 驅動對統一記憶體的保留。釋放方法依序是：停掉模型服務 → 清 page cache → 重開機。
 
 範例：開給區網用並加金鑰
 
