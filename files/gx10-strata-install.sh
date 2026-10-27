@@ -55,6 +55,8 @@ FROM=""
 SKIP=""
 RESUME=0
 NO_SYSTEMD=0
+PLE_RAM=1
+DIAG=0
 
 # ---------------------------------------------------------------- 輸出格式
 step_title() { printf '\n\033[1;36m--- 步驟 %s：%s ---\033[0m\n' "$1" "$2"; }
@@ -97,7 +99,30 @@ step0_env() {
   if [ "${nvcc%%.*}" = "13" ]; then ok "CUDA toolkit $nvcc"; else bad "CUDA toolkit 是 ${nvcc:-未安裝}，需要 13.x"; fails=$((fails+1)); fi
 
   memavail=$(awk '/MemAvailable/{printf "%.1f", $2/1048576}' /proc/meminfo)
-  if awk "BEGIN{exit !($memavail >= 100)}"; then ok "MemAvailable ${memavail} GiB"; else bad "MemAvailable 只有 ${memavail} GiB，需要 >= 100"; fails=$((fails+1)); fi
+  memtotal=$(awk '/MemTotal/{printf "%.1f", $2/1048576}' /proc/meminfo)
+  if awk "BEGIN{exit !($memtotal >= 120)}"; then
+    ok "記憶體總量 ${memtotal} GiB"
+  else
+    bad "記憶體總量只有 ${memtotal} GiB，GX10 應該是 128 GB"; fails=$((fails+1))
+  fi
+  if awk "BEGIN{exit !($memavail >= 90)}"; then
+    ok "MemAvailable ${memavail} GiB"
+    if awk "BEGIN{exit !($memavail >= 115)}"; then
+      ok "  → 記憶體夠，PLE 放 RAM（--ple-io ram），prompt 快 9–18%"
+      PLE_RAM=1
+    else
+      warn "  → 記憶體不夠，PLE 留在 SSD（不加 --ple-io ram），prompt 慢 9–18%"
+      PLE_RAM=0
+    fi
+  else
+    bad "MemAvailable 只有 ${memavail} GiB，需要 >= 90 GiB 才能安全載入 IQ3_S"
+    info "  總量有 ${memtotal} GiB，是「被占用了」而不是「沒有記憶體」。常見吃貨："
+    info "    · 還在跑的 Ollama / llama-server（你原本的 30B coder、27B）"
+    info "    · Docker 容器、背景的模型服務"
+    info "    · NVIDIA 驅動對統一記憶體的保留"
+    info "  用 bash $0 --diag 看是誰占的；停掉之後再跑一次本步驟。"
+    fails=$((fails+1))
+  fi
 
   local probe="$DATA_DIR"
   while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do probe=$(dirname "$probe"); done
@@ -203,6 +228,12 @@ step4_model() {
 step5_config() {
   step_title 5 "${STEP_NAMES[5]}"
   [ -f "$CFG" ] || die "找不到設定檔 $CFG"
+  if [ "$PLE_RAM" != "1" ]; then
+    warn "步驟 0 判定記憶體不夠，不加 --ple-io ram（PLE 留在 SSD）"
+    info "設定檔：$CFG"
+    step_end
+    return 0
+  fi
   local helper="$STRATA_DIR/gx10-patch-ple.py"
   if [ -f "$helper" ]; then
     python3 "$helper" "$CFG" || warn "設定調整失敗，可手動處理"
@@ -299,6 +330,7 @@ while [ $# -gt 0 ]; do
     --skip)       SKIP="$2"; shift 2 ;;
     --resume)     RESUME=1; shift ;;
     --no-systemd) NO_SYSTEMD=1; shift ;;
+    --diag)       DIAG=1; shift ;;
     -h|--help)    sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "未知參數：$1"; exit 1 ;;
   esac
@@ -306,11 +338,44 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# ============================================================ 記憶體診斷
+diag_mem() {
+  printf '\n\033[1;36m=== 記憶體診斷 ===\033[0m\n'
+  printf '\n-- /proc/meminfo 重點（GiB）--\n'
+  awk '/^(MemTotal|MemFree|MemAvailable|Buffers|Cached|Dirty|Writeback|Shmem|SReclaimable):/{
+        printf "  %-16s %8.1f GiB\n", $1, $2/1048576 }' /proc/meminfo
+  printf '\n-- free -h --\n'
+  free -h | sed 's/^/  /'
+  printf '\n-- 記憶體用量前 10 名行程 --\n'
+  ps -eo pid,user,rss,comm --sort=-rss | head -11 | awk '{printf "  %-8s %-8s %8.1f GiB  %s\n", $1, $2, $3/1048576, $4}'
+  printf '\n-- 常見的模型服務 --\n'
+  local found=0 svc
+  for svc in ollama llama-server llama-server-cpu vllm sglang docker containerd; do
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+      printf '  服務在跑：%s   （停掉：sudo systemctl stop %s）\n' "$svc" "$svc"; found=1
+    fi
+  done
+  if command -v docker >/dev/null 2>&1; then
+    docker ps --format '  容器：{{.Names}}  {{.Image}}  {{.Status}}' 2>/dev/null || true
+  fi
+  [ "$found" = "0" ] && printf '  （沒有發現 ollama / llama-server / vllm 等服務）\n'
+  printf '\n-- NVIDIA 驅動 --\n'
+  nvidia-smi --query-gpu=name,memory.total,memory.used,driver_version --format=csv 2>&1 | sed 's/^/  /'
+  printf '\n-- 最近的核心記憶體訊息 --\n'
+  dmesg 2>/dev/null | grep -iE "oom|killed process|memory" | tail -8 | sed 's/^/  /' || printf '  （無 dmesg 權限或無紀錄）\n'
+  printf '\n-- 建議動作 --\n'
+  printf '  1. 先停掉還在跑的模型服務（Ollama 等），這通常能立刻釋放數十 GB\n'
+  printf '  2. sync; echo 3 > /proc/sys/vm/drop_caches   （清 page cache，需 root）\n'
+  printf '  3. 若還是低，重開機後立刻再跑一次 --only 0\n'
+}
+
 # ============================================================ 執行
 printf '\033[1mStrata LLM × GX10 安裝\033[0m\n'
 info "程式碼：$STRATA_DIR"
 info "模型資料：$DATA_DIR"
 info "設定：$MODEL / ctx $CTX / 埠號 $PORT / 監聽 $API_HOST"
+
+if [ "$DIAG" = "1" ]; then diag_mem; exit 0; fi
 
 if should_run 0; then step0_env;    mark_done 0; fi
 if should_run 1; then step1_clone;  mark_done 1; fi
