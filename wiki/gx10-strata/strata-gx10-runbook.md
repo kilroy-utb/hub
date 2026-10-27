@@ -296,6 +296,36 @@ done
 
 ## 5. 若崩潰：#3525 排查矩陣
 
+### 4.3 記憶體被占滿時怎麼查（GB10 專用）
+
+GB10 是統一記憶體，`nvidia-smi` 的 memory.used 顯示 `[N/A]`，但**行程清單還是看得到**，
+而且每個行程後面有真實的佔用量 —— 這是查「誰吃掉記憶體」最快的入口：
+
+```bash
+nvidia-smi          # 看最下面那欄 GPU Memory
+```
+
+實測案例（MemAvailable 只有 68.7 / 128 GiB）：
+
+| 程序 | 佔用 | 處置 |
+|---|---|---|
+| `ollama/llama-server` | 33,244 MiB | `ollama stop <模型>` 或 `sudo systemctl stop ollama` |
+| `python`（另起的推論服務） | 6,977 MiB | 先 `ps -p <PID> -o cmd` 確認是什麼再決定 |
+| Xorg / gnome-shell / firefox | 474 MiB | 桌面，可忽略 |
+
+```bash
+# 卸載後清 page cache，把可回收的部分還給系統
+sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches
+
+# ⚠️ Ollama 的 keep_alive 預設 5 分鐘，模型會自動載回來吃掉那 33 GB。
+#    裝 Strata 前要收掉：sudo systemctl disable --now ollama
+#    或 export OLLAMA_KEEP_ALIVE=0
+```
+
+> 記憶體不足不一定會報錯。最陰險的狀況是 **cache 失駐**：記憶體有壓力時 kernel 會把
+> mmap 的 GGUF 頁面踢出來，CPU 就開始接手算 expert，速度從 82.9 掉到 19.7 tok/s。
+> 所以啟動後一定要用 `top` 確認 CPU 忙碌度接近 0%。
+
 依序嘗試，每次只動一個變因：
 
 | 順序 | 動作 | 預期 |
