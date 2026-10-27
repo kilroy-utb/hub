@@ -25,6 +25,9 @@
 # =============================================================================
 set -uo pipefail
 
+# 腳本版本：改了內容請一併 bump，現場對版本時看這行
+SCRIPT_VERSION="2026-10-27.4"
+
 # ---------------------------------------------------------------- 設定值
 STRATA_DIR="${STRATA_DIR:-$HOME/Strata}"
 DATA_DIR="${DATA_DIR:-/data/strata}"
@@ -231,6 +234,25 @@ step4_model() {
   info "下載量約 90 GB（pack 54.8 + PLE n-gram 表 28.8 + MTP draft 6）"
   info "設定：$MODEL / context $CTX / KV int8 / 併發 4（官方實測設定）"
   info "MTP 推測解碼由 setup.py 自動抓取與啟用，不需要額外參數"
+
+  # 預檢：確認這個 setup.py 認得我們要傳的每個參數，避免又撞到 unrecognized arguments
+  local help_out bad_flag="" flag
+  help_out=$(cd "$STRATA_DIR" && python3 setup.py --help 2>&1)
+  for flag in --model --context --kv --parallel --cuda --build --data-dir --host --port --no-browser --no-start --yes; do
+    echo "$help_out" | grep -q -- "$flag" || bad_flag="$bad_flag $flag"
+  done
+  if [ -n "$API_KEY" ]; then
+    echo "$help_out" | grep -q -- "--api-key" || bad_flag="$bad_flag --api-key"
+  fi
+  if [ -n "$bad_flag" ]; then
+    bad "這個 setup.py 不支援：$bad_flag"
+    info "腳本版本：$SCRIPT_VERSION"
+    info "八成是腳本版本太舊，重新下載："
+    info "  curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-install.sh"
+    die "更新腳本後再續跑（其他步驟不受影響）"
+  fi
+  ok "setup.py 參數預檢通過"
+
   local extra=()
   [ -n "$API_KEY" ] && extra+=(--api-key "$API_KEY")
   python3 setup.py \
@@ -398,6 +420,7 @@ diag_mem() {
 
 # ============================================================ 執行
 printf '\033[1mStrata LLM × GX10 安裝\033[0m\n'
+info "腳本版本：$SCRIPT_VERSION"
 info "程式碼：$STRATA_DIR"
 info "模型資料：$DATA_DIR"
 info "設定：$MODEL / ctx $CTX / 埠號 $PORT / 監聽 $API_HOST"
