@@ -766,8 +766,10 @@ def cmd_build(args):
     cfg = load_config(args.config)
 
     if args.no_push:
-        # 本機模式：--repo 可省略（badge 仍算），但要設個 dummy 給 footer
-        repo = args.repo or "local/local"
+        # 本機模式：--repo 可省略（badge 仍算）。先從 cwd 的 git remote 偵測 repo，
+        # 這樣 CI 的 --no-push 建置產生的頁面，連結才會指向真正的 GitHub Pages
+        # （沒有就退回 dummy，footer 與面包屑才不會指向 local.github.io/local）
+        repo = args.repo or get_git_remote(Path.cwd()) or "local/local"
     elif args.repo:
         repo = args.repo
     else:

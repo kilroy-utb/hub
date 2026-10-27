@@ -42,6 +42,14 @@ sections:
     badge_source:
       local: "wiki/finance"
 
+  - title: "GX10 × Strata LLM"
+    icon: "🖥️"
+    desc: "在 ASUS Ascent GX10 上部署 Strata LLM 與 Qwen3.8-Flash-Next 125B"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/gx10-strata/"
+    badge_source:
+      local: "wiki/gx10-strata"
+
   - title: "AI 技術統整"
     icon: "🤖"
     desc: "模型進展、Local LLM、Agent 與 Skill 生態"

@@ -31,5 +31,6 @@ python3 ~/.hermes/skills/hub/scripts/hub.py build --repo kilroy-utb/hub
 | 🧬 生物四格漫畫 | `kilroy-utb/knowledge_base` | PNG 數 |
 | 📖 Wiki | `./wiki/` | MD 數 |
 | 💰 財經筆記 | `./wiki/finance/` | MD 數 |
+| 🖥️ GX10 × Strata LLM | `./wiki/gx10-strata/` | MD 數 |
 | ✅ Todo | `./todo/` | open checkbox 數 |
 | 📝 雜項筆記 | `./notes/` | MD 數 |
