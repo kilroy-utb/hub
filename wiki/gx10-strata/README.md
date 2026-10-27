@@ -13,6 +13,7 @@
 | [`gx10-strata-install.sh`](#一gx10-strata-installsh安裝) | **安裝**：環境檢查 → 取得程式碼 → 編譯引擎 → 下載模型 → 產生設定 → 開 systemd → 驗收 | 一開始跑一次 |
 | [`gx10-strata-smoke.sh`](#二gx10-strata-smokesh測試) | **測試**：檢查崩潰、查 experts 常駐、量 tok/s、量 CPU 忙碌度、取樣記憶體 | 想確認效能或懷疑退化時跑 |
 | [`gx10-patch-ple.py`](#三gx10-patch-plepy設定調整) | **小幫手**：把 `--ple-io ram` 寫進設定檔（安裝腳本第 5 步會自動呼叫） | 通常不用手動執行 |
+| [`gx10-free-mem.sh`](#四gx10-free-memsh記憶體釋放) | **釋放記憶體**：卸載 Ollama 模型、收掉殘留推論行程、清 page cache | 安裝前記憶體不夠時跑 |
 
 > 這三支都是**純腳本**，不取代 Strata 官方的 `setup.py`。安裝本身仍是 `git clone` + `cmake` + `setup.py`，腳本只是把參數填好、把錯誤判斷寫清楚。
 
@@ -27,6 +28,7 @@
 curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-install.sh
 curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-smoke.sh
 curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ple.py
+curl -O https://kilroy-utb.github.io/hub/files/gx10-free-mem.sh
 chmod +x gx10-strata-*.sh gx10-patch-ple.py
 
 # 2. 先只做環境檢查（不動任何東西）
@@ -195,6 +197,40 @@ PY
 
 > ⚠️ **參數在設定檔 JSON 裡，不在 `run-iq3_s.sh`。** `run-iq3_s.sh` 只是呼叫
 > `serve/server.py --config strata-iq3_s.json`。
+
+---
+
+## 四、`gx10-free-mem.sh`（記憶體釋放）
+
+安裝前記憶體被占滿時跑這支。它依序做四件事，最後報告釋放了多少：
+
+1. 卸載 Ollama 的模型（`ollama stop <模型>`）
+2. 收掉殘留的 `llama-server` 行程（先 SIGTERM，不行才 SIGKILL）
+3. 停用 ollama 服務（避免 `keep_alive` 又抓回 33 GB）
+4. 清 page cache（`drop_caches`）
+
+```bash
+# 先看它要做什麼，不實際執行
+bash gx10-free-mem.sh --dry-run
+
+# 實際執行
+bash gx10-free-mem.sh
+
+# 順便收掉某個指定的行程（例如那個吃 6.8 GB 的 python）
+bash gx10-free-mem.sh --kill-pid 31775
+```
+
+**安全設計**：只會收掉 `llama-server` 與你明確指定的 PID，其他行程只列出、不動作。
+
+**GB10 專用排查法**：`nvidia-smi` 雖然把記憶體顯示成 `[N/A]`，但行程清單看得到真實佔用量，
+是查「誰吃掉記憶體」最快的入口：
+
+```bash
+nvidia-smi | sed -n '/Processes:/,$p'
+```
+
+實測案例（MemAvailable 只有 68.7 / 128 GiB）：`ollama/llama-server` 佔 33,244 MiB、
+某個 python 推論服務佔 6,977 MiB，兩者合計就是那 59 GiB 的落差來源。
 
 ---
 
