@@ -50,6 +50,14 @@ sections:
     badge_source:
       local: "wiki/gx10-strata"
 
+  - title: "平台變現分析"
+    icon: "💸"
+    desc: "架設網路平台的獲利模式：正規經營、灰色地帶與營利潛力量化"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/platform-monetization/"
+    badge_source:
+      local: "wiki/platform-monetization"
+
   - title: "AI 技術統整"
     icon: "🤖"
     desc: "模型進展、Local LLM、Agent 與 Skill 生態"

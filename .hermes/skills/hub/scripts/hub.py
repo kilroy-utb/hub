@@ -587,6 +587,7 @@ FILE_ITEM_TEMPLATE = """      <div class="file-item">
 def _icon_for_ext(ext: str) -> str:
     return {
         ".md": "📝",
+        ".html": "🌐",
         ".png": "🖼️", ".jpg": "🖼️", ".jpeg": "🖼️", ".gif": "🖼️", ".webp": "🖼️", ".svg": "🖼️",
         ".pdf": "📕",
         ".csv": "📊", ".xlsx": "📊", ".xls": "📊",
@@ -612,13 +613,23 @@ def render_section_index_html(sec: dict, cfg: dict, hub_url: str, files: list, f
     else:
         path = sec.get("badge_source", {}).get("local", "unknown") if isinstance(sec.get("badge_source"), dict) else "unknown"
 
+    # 「新增檔案」按鈕用的 repo 名稱（.md 連結也用得到）
+    repo_name = "kilroy-utb/hub"
+    if isinstance(sec.get("badge_source"), dict) and "repo" in sec["badge_source"]:
+        repo_name = sec["badge_source"]["repo"]
+
     # 顯示每個檔案
     items = []
     for fname, ext, size in files:
         icon = _icon_for_ext(ext)
         meta = f"{ext[1:].upper()} · {size:,} bytes" if ext else f"{size:,} bytes"
-        if file_type == "md":
+        if ext.lower() == ".html":
+            # 獨立 HTML 頁：直接開在 Pages 上
             href = f"./{fname}"
+            action_label = "開啟"
+        elif file_type == "md":
+            # .md 連到 GitHub 渲染頁 —— Pages 靜態站不會渲染 markdown
+            href = f"https://github.com/{repo_name}/blob/main/{path.rstrip('/')}/{fname}"
             action_label = "閱讀"
         else:
             href = f"./{fname}"
@@ -636,9 +647,6 @@ def render_section_index_html(sec: dict, cfg: dict, hub_url: str, files: list, f
     desc_html = f'<p class="desc">{sec["desc"]}</p>' if sec.get("desc") else ""
 
     # 「新增檔案」按鈕：直連 GitHub web editor
-    repo_name = "kilroy-utb/hub"
-    if isinstance(sec.get("badge_source"), dict) and "repo" in sec["badge_source"]:
-        repo_name = sec["badge_source"]["repo"]
     new_button = f'<a href="https://github.com/{repo_name}/new/main/{path.rstrip("/")}?filename={path}new-file.md" target="_blank" rel="noopener">+ 新增檔案</a>'
 
     edit_folder_url = f"https://github.com/kilroy-utb/hub/tree/main/{path.rstrip('/')}"
@@ -674,12 +682,16 @@ def collect_section_files(workdir: Path, path: str, sec_type: str) -> tuple[list
         return [], "md"
 
     if sec_type in ("wiki", "todo"):
-        # 只列 .md，跳過 index.md
+        # 列 .md（跳過 index.md）與獨立 .html 頁（跳過 index.html）
         files = []
         for f in sorted(d.glob("*.md")):
             if f.name == "index.md":
                 continue
             files.append((f.name, ".md", f.stat().st_size))
+        for f in sorted(d.glob("*.html")):
+            if f.name == "index.html":
+                continue
+            files.append((f.name, ".html", f.stat().st_size))
         return files, "md"
     elif sec_type == "file":
         # 列所有非 .md / .html 檔

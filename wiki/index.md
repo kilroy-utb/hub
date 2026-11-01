@@ -4,6 +4,7 @@
 
 ## 子目錄
 
+- [`wiki/platform-monetization/`](./platform-monetization/) — 網路平台獲利模式分析報告（正規經營／灰色地帶／營利潛力）
 - [`wiki/finance/`](./finance/) — 財經筆記（持股、研究）
 - `wiki/` — 一般知識
 

@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>架設網路平台的獲利模式分析報告 v1.0</title>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#111a2e; --panel:#141f36; --panel2:#1a2740;
+  --line:#24324f;
+  --tx:#e6edf7; --tx2:#9fb0c9; --tx3:#6c7f9b;
+  --cyan:#22d3ee; --teal:#2dd4bf; --green:#34d399; --amber:#fbbf24;
+  --orange:#fb923c; --red:#f87171; --violet:#a78bfa;
+  --radius:14px; --maxw:1180px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  line-height:1.85; font-size:16px; -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(34,211,238,.10), transparent 60%),
+    radial-gradient(800px 500px at 90% 5%, rgba(167,139,250,.09), transparent 60%);
+}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* NAV */
+nav{
+  position:sticky; top:0; z-index:50; background:rgba(11,18,32,.90);
+  backdrop-filter:blur(14px); border-bottom:1px solid var(--line);
+}
+.navin{max-width:var(--maxw);margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.3px;font-size:15px;white-space:nowrap}
+.brand span{color:var(--cyan)}
+.navlinks{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.navlinks a{color:var(--tx2);font-size:13px;padding:5px 11px;border-radius:20px;white-space:nowrap}
+.navlinks a:hover{background:rgba(34,211,238,.12);color:var(--cyan);text-decoration:none}
+
+/* LAYOUT */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+section{padding:54px 0 10px}
+.sechead{margin-bottom:26px}
+.eyebrow{color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;margin-bottom:8px}
+h1{font-size:clamp(28px,4.6vw,46px);line-height:1.25;font-weight:800;letter-spacing:-.5px}
+h2{font-size:clamp(21px,3vw,29px);font-weight:800;line-height:1.35;margin-bottom:10px}
+h3{font-size:17px;font-weight:700;color:var(--tx);margin:22px 0 8px}
+h4{font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--tx)}
+p{margin-bottom:12px}
+p:last-child{margin-bottom:0}
+.lead{font-size:17px;color:var(--tx2)}
+.muted{color:var(--tx2)}
+.small{font-size:13.5px}
+.tiny{font-size:12.5px;color:var(--tx3)}
+
+/* HERO */
+.hero{padding:60px 0 34px}
+.hero .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.chip{
+  background:rgba(34,211,238,.09);border:1px solid rgba(34,211,238,.28);
+  color:var(--cyan);font-size:12.5px;padding:4px 12px;border-radius:20px;font-weight:600;
+}
+.chip.g{background:rgba(52,211,153,.09);border-color:rgba(52,211,153,.28);color:var(--green)}
+.chip.a{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.28);color:var(--amber)}
+.chip.v{background:rgba(167,139,250,.09);border-color:rgba(167,139,250,.28);color:var(--violet)}
+
+.callout{
+  border-left:3px solid var(--cyan); background:rgba(34,211,238,.05);
+  padding:14px 18px;border-radius:0 10px 10px 0;margin:18px 0;color:var(--tx2);font-size:14.5px;
+}
+.callout.warn{border-color:var(--amber);background:rgba(251,191,36,.055)}
+.callout.danger{border-color:var(--red);background:rgba(248,113,113,.055)}
+.callout.good{border-color:var(--green);background:rgba(52,211,153,.055)}
+.callout b,.callout strong{color:var(--tx)}
+
+/* CARDS */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden;
+}
+.card.t{border-top:3px solid var(--cyan)}
+.card.tg{border-top:3px solid var(--green)}
+.card.ta{border-top:3px solid var(--amber)}
+.card.tr{border-top:3px solid var(--red)}
+.card.tv{border-top:3px solid var(--violet)}
+.card h3{margin-top:0}
+.kpi{font-size:30px;font-weight:800;line-height:1.2;letter-spacing:-.5px}
+.kpi-label{font-size:12.5px;color:var(--tx3);margin-top:5px}
+.statbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.statbox .num{font-size:26px;font-weight:800;color:var(--cyan);line-height:1.25}
+.statbox .num.g{color:var(--green)}.statbox .num.a{color:var(--amber)}.statbox .num.r{color:var(--red)}
+.statbox .lb{font-size:12.5px;color:var(--tx2);margin-top:4px}
+.statbox .src{font-size:11.5px;color:var(--tx3);margin-top:6px}
+
+/* TABLE */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);font-weight:700;font-size:13px;color:var(--tx);position:sticky;top:0;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(34,211,238,.04)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hl{color:var(--cyan);font-weight:700}
+.hl-g{color:var(--green);font-weight:700}
+.hl-a{color:var(--amber);font-weight:700}
+.hl-r{color:var(--red);font-weight:700}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.tag.g{background:rgba(52,211,153,.14);color:var(--green)}
+.tag.a{background:rgba(251,191,36,.14);color:var(--amber)}
+.tag.r{background:rgba(248,113,113,.14);color:var(--red)}
+.tag.c{background:rgba(34,211,238,.14);color:var(--cyan)}
+.tag.v{background:rgba(167,139,250,.14);color:var(--violet)}
+
+/* MODEL CARD */
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0;overflow:hidden;display:flex;flex-direction:column}
+.mcard .mh{padding:16px 18px 13px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.mcard .mid{font-size:11.5px;font-weight:700;letter-spacing:1.4px;color:var(--tx3)}
+.mcard .mt{font-size:18px;font-weight:800;margin-top:3px}
+.mcard .mb{padding:16px 18px;flex:1}
+.mcard .mf{padding:13px 18px;border-top:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;background:rgba(255,255,255,.015)}
+.mcard.star{border-color:rgba(52,211,153,.4)}
+.mcard.avoid{border-color:rgba(248,113,113,.35)}
+
+/* CALC */
+.calc{background:linear-gradient(160deg,#16233c,#111a2e);border:1px solid var(--line);border-radius:18px;padding:0;overflow:hidden;margin:18px 0}
+.calchead{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.calchead .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.calchead h3{margin:0;font-size:18px}
+.calchead p{margin:2px 0 0;font-size:13px;color:var(--tx2)}
+.calcbody{padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--tx2);margin-bottom:6px;font-weight:600}
+.field .hint{font-size:11.5px;color:var(--tx3);font-weight:400}
+input[type=number],input[type=text],select{
+  width:100%;background:#0d1728;border:1px solid var(--line);color:var(--tx);
+  padding:9px 11px;border-radius:9px;font-size:14.5px;font-family:inherit;
+  font-variant-numeric:tabular-nums;
+}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.13)}
+input[type=range]{width:100%;accent-color:var(--cyan);height:24px}
+.rangewrap{display:flex;align-items:center;gap:12px}
+.rangewrap output{font-size:13.5px;font-weight:700;color:var(--cyan);min-width:86px;text-align:right;font-variant-numeric:tabular-nums}
+.btn{
+  background:linear-gradient(135deg,#22d3ee,#2dd4bf);color:#06202a;border:none;
+  padding:11px 22px;border-radius:10px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit;
+  transition:transform .12s ease,box-shadow .12s ease;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(34,211,238,.25)}
+.btn.ghost{background:transparent;color:var(--tx2);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--cyan);border-color:var(--cyan);box-shadow:none}
+.btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+
+.result{background:#0d1728;border:1px solid var(--line);border-radius:13px;padding:18px}
+.result h4{font-size:12.5px;color:var(--tx3);letter-spacing:1.2px;text-transform:uppercase;margin:0 0 10px}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.rrow:last-child{border-bottom:none}
+.rrow .k{font-size:13.5px;color:var(--tx2)}
+.rrow .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.big{font-size:36px;font-weight:800;line-height:1.15;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.verdict{border-radius:11px;padding:14px 16px;margin-top:14px;font-size:14.5px;font-weight:600;line-height:1.7}
+.v-good{background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.32);color:#6ee7b7}
+.v-bad{background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.32);color:#fca5a5}
+.v-warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.32);color:#fcd34d}
+
+/* gauge */
+.gauge{height:10px;background:#0d1728;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-top:8px;position:relative}
+.gauge i{display:block;height:100%;border-radius:20px;transition:width .4s ease}
+.gauge .mark{position:absolute;top:-4px;width:2px;height:18px;background:var(--tx);opacity:.75}
+
+/* checklist */
+.check{display:flex;gap:11px;align-items:flex-start;padding:10px 13px;border-radius:9px;transition:background .15s}
+.check:hover{background:rgba(34,211,238,.05)}
+.check input{margin-top:5px;width:16px;height:16px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
+.check label{font-size:14px;cursor:pointer}
+.check .law{font-size:12px;color:var(--tx3);display:block}
+.check.done label{text-decoration:line-through;opacity:.5}
+
+/* timeline */
+.tl{position:relative;padding-left:30px}
+.tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--cyan),var(--violet))}
+.tlitem{position:relative;margin-bottom:26px}
+.tlitem::before{content:"";position:absolute;left:-26px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2.5px solid var(--cyan)}
+.tlitem h4{margin:0 0 4px;font-size:16px}
+.tlitem .day{font-size:12px;color:var(--cyan);font-weight:700;letter-spacing:.8px}
+
+/* misc */
+.kv{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--tx2);min-width:180px;flex-shrink:0}
+.formula{
+  background:#0d1728;border:1px solid var(--line);border-radius:11px;padding:16px 20px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14.5px;
+  color:var(--cyan);margin:14px 0;overflow-x:auto;white-space:pre;
+}
+.footnote{font-size:12.5px;color:var(--tx3);margin-top:8px}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:30px 0 46px;color:var(--tx3);font-size:13px}
+.srcline{font-size:12.5px;color:var(--tx2)}
+
+@media (max-width:900px){
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .calcbody{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .navlinks{display:none}
+  section{padding:38px 0 6px}
+  .hero{padding:36px 0 22px}
+  .kv{flex-direction:column;gap:2px}
+  .kv .k{min-width:0}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navin">
+    <div class="brand">網路平台獲利模式<span>分析報告</span></div>
+    <div class="navlinks">
+      <a href="#summary">摘要</a>
+      <a href="#market">市場</a>
+      <a href="#legal">正規模式</a>
+      <a href="#gray">灰色地帶</a>
+      <a href="#map">對照表</a>
+      <a href="#profit">營利潛力</a>
+      <a href="#calc">試算器</a>
+      <a href="#compliance">法遵</a>
+      <a href="#roadmap">路線圖</a>
+      <a href="#risk">風險</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="eyebrow">Analysis Report · v1.0 · 2026-11-01</div>
+  <h1>架設網路平台的獲利模式分析報告</h1>
+  <p class="lead" style="margin-top:14px;max-width:820px">
+    涵蓋 <b>8 個正規經營模型</b>、<b>8 個灰色地帶模型</b>、<b>灰色→合法對照表</b>與<b>量化營利潛力</b>，
+    內建兩個互動試算器可直接代入你的參數。
+  </p>
+  <div class="meta">
+    <span class="chip">法域：台灣</span>
+    <span class="chip g">正規經營模式</span>
+    <span class="chip a">灰色地帶期望值分析</span>
+    <span class="chip v">含互動試算器</span>
+    <span class="chip">模型推估，非引用實績</span>
+  </div>
+
+  <div class="callout danger" style="margin-top:22px">
+    <b>本報告的立場：</b>灰色地帶以「風險調整後經濟性」與「法遵邊界」角度分析，<b>不提供任何違法實作步驟</b>。
+    每個灰色模式均附對應的合法版本 —— 報告的核心結論是：<b>灰色地帶不是「更划算的選項」，而是「在特定條件下期望值可能為正的短期套利」，其期望值隨規模遞減。</b>
+    <span class="tiny" style="display:block;margin-top:8px">本報告不構成法律意見或投資建議。涉及實際法律判斷，請諮詢執業律師與會計師。</span>
+  </div>
+</header>
+
+<!-- ============ SUMMARY ============ -->
+<section id="summary">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 01</div>
+    <h2>執行摘要</h2>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="statbox"><div class="num c" style="color:var(--cyan)">US$5.65B</div><div class="lb">台灣數位廣告 2026（年增 10.9%）</div><div class="src">Research and Markets, 2026-02-10</div></div>
+    <div class="statbox"><div class="num r">91.8%</div><div class="lb">G1 未授權內容聚合的臨界被查機率 P*</div><div class="src">模型推估 → 實質不可行</div></div>
+    <div class="statbox"><div class="num g">3 個</div><div class="lb">M7 達損益平衡所需客戶數（最推薦）</div><div class="src">固定成本 NT$6 萬／月</div></div>
+    <div class="statbox"><div class="num a">3,700+</div><div class="lb">AI 低可信內容站（2023/05 僅 49 個）</div><div class="src">NewsGuard, 2026-06</div></div>
+  </div>
+
+  <h3>五個核心結論</h3>
+  <div class="grid g2" style="margin-bottom:22px">
+    <div class="card t">
+      <h4>結論一 · 賺錢來源不是「架平台」</h4>
+      <p class="small muted">平台技術門檻在下降，但分發權（誰決定你的曝光）與信任門檻在上升。平台本身不產生價值，價值產生在「交易雙方因為你而更容易完成一件原本難以完成的事」。把「架平台」本身當商業模式的計畫，報酬率會被壓到接近零。</p>
+    </div>
+    <div class="card t">
+      <h4>結論二 · 正規市場天花板高，但現金流壓力是真門檻</h4>
+      <p class="small muted">以固定成本 NT$6 萬／月為基準，多數模式的損益平衡落在「數十到數百個付費客戶」之間。門檻不算高，但需要 6–12 個月的現金流準備。</p>
+    </div>
+    <div class="card ta">
+      <h4>結論三 · 灰色地帶期望值隨規模遞減</h4>
+      <p class="small muted">灰色模式的收益與被查緝的機率<b>同向增長</b>，而事故損失與收益<b>不同比例增長</b>（金額型線性甚至超線性，聲譽型斷層式）。規模擴大時期望值先升後降，最後趨近負值。</p>
+    </div>
+    <div class="card ta">
+      <h4>結論四 · AI 讓「低成本大量產出」徹底失效</h4>
+      <p class="small muted">AI 農場的單位經濟是負的；同時 AI 檢索摘要（AIO）正在吃掉傳統內容農場的入口流量 —— 這對正規「付費內容」模式構成實質威脅。</p>
+    </div>
+    <div class="card tr">
+      <h4>結論五 · 支付與電信法規把「代收」推入高風險區</h4>
+      <p class="small muted">第三方支付服務業（I301040）屬需登錄行業；2025 電信業法修法後未登記 IASP 最高罰 NT$100 萬。這兩條讓灰色地帶中<b>最賺錢</b>的一類（資金代收）直接進入高風險區。</p>
+    </div>
+    <div class="card t">
+      <h4>結論五+ · 灰色會摧毀你的合法生意</h4>
+      <p class="small muted">灰色模式帳面獲利，靠的是抄走「你合法版本本來要提供的價值」。長期而言，它是在挖自己的護城河。</p>
+    </div>
+  </div>
+
+  <h3>推薦路線（單一答案）</h3>
+  <div class="callout good">
+    <b>先做 M7（代營運／技術服務）取得現金流與案例 → 用累積的產業 Know-how 與信任，收斂成 M1（付費專業社群）或 M6（產業情報訂閱）→ 有穩定經常性收入後，才用 M3（B2B 垂直工具）產品化。</b>
+    <div class="small" style="margin-top:10px">
+    ① M7 損益平衡只需 3 個客戶（NT$2 萬／月），30–60 天可達成，風險最低；
+    ② M7 讓你在<b>合法框架內</b>驗證產業真實痛點；
+    ③ 服務業的現金流可支撐 M1／M6 冷啟動，不必靠灰色模式輸血。
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARKET ============ -->
+<section id="market">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 02</div>
+    <h2>市場環境：三個同時發生的結構轉變</h2>
+    <p class="lead">規劃網路平台的營利策略前，必須先理解 2026 年的三個結構性轉變 —— 它們同時決定了「哪些模式還有機會」與「哪些模式已經死亡」。</p>
+  </div>
+
+  <h3>轉變一 · AI 讓內容供給側嚴重通膨</h3>
+  <div class="grid g4" style="margin-bottom:12px">
+    <div class="statbox"><div class="num r">49 → 3,700+</div><div class="lb">低可信 AI 生成新聞站</div><div class="src">NewsGuard，2023/05 → 2026/06</div></div>
+    <div class="statbox"><div class="num r">~40%</div><div class="lb">Google HCU 已移除目標內容</div><div class="src">Google Search Central, 2024/03</div></div>
+    <div class="statbox"><div class="num a">57.5%</div><div class="lb">雲端殭屍流量佔全部流量</div><div class="src">Cloudflare, 2026/06</div></div>
+    <div class="statbox"><div class="num a">2026/10/08</div><div class="lb">Google 核心更新打擊 Content Mills 2.0</div><div class="src">跨站模式比對 + 整站降權</div></div>
+  </div>
+  <div class="callout warn"><b>對平台的意義：</b>「大量生產、低成本、無差異化」不再是可行的競爭策略。以數量取勝的平台會同時被搜尋演算法與使用者注意力雙重排除。</div>
+
+  <h3>轉變二 · 入口流量價值暴跌（AIO 與流量貶值）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>指標</th><th class="num">數值</th><th>來源</th></tr></thead>
+      <tbody>
+        <tr><td>有 AI 摘要（AIO）的搜尋結果點出率</td><td class="num"><span class="hl-a">8%</span>（有 AIO）vs 15%（無）</td><td class="srcline">Pew Research Center</td></tr>
+        <tr><td>搜尋點出外部網站比例</td><td class="num"><span class="hl-a">&lt; 1/3</span></td><td class="srcline">SparkToro, 2026</td></tr>
+        <tr><td>AIO 造成的首頁 CTR 變化</td><td class="num"><span class="hl-r">−34.5%</span>（2026/05）→ <span class="hl-r">−58%</span></td><td class="srcline">業界流量研究彙整</td></tr>
+        <tr><td>單站自然流量變化（2026/06–2027/06）</td><td class="num">Politico −23%｜CNN −25%｜USA Today ~−50%｜BI <span class="hl-r">−85%</span></td><td class="srcline">Semrush</td></tr>
+        <tr><td>媒體網站廣告 RPM</td><td class="num"><span class="hl-r">US$30–50 → US$12–22</span></td><td class="srcline">Mediavine / Raptive，2022 → 2026</td></tr>
+        <tr><td>AI 爬蟲抓取頁數</td><td class="num">數百至數千頁／爬蟲 vs 傳統約 5 頁／訪客</td><td class="srcline">業界實測</td></tr>
+        <tr><td>封鎖 AI 爬蟲的出版社流量影響</td><td class="num">總造訪 <span class="hl-a">−23.1%</span>｜人造訪 −13.9%</td><td class="srcline">WSJ, 2025/12（華盛頓大學 + 普林斯頓）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout danger">
+    <b>關鍵乘法效應：</b>流量 −40% × RPM −40% = 營收剩下 <b>36%</b>（約掉 64%）。
+    這說明「流量成長」不再是營收成長的保證 —— 流量本身的價值在貶值。
+    <div class="small" style="margin-top:8px"><b>對平台的意義：</b>必須把「使用者直接回訪」與「建立自有資料壁壘」當第一優先。<b>訂閱制與會員制價值上升，流量變現價值下降。</b></div>
+  </div>
+
+  <h3>轉變三 · 需求端仍成長，但注意力高度集中</h3>
+  <div class="grid g2" style="margin-bottom:12px">
+    <div>
+      <div class="tablewrap" style="margin-top:0">
+        <table>
+          <thead><tr><th>台灣廣告類別</th><th class="num">規模 (US$B)</th><th class="num">年增</th></tr></thead>
+          <tbody>
+            <tr><td>搜尋廣告</td><td class="num">1.85</td><td class="num">—</td></tr>
+            <tr><td>社群廣告</td><td class="num">1.48</td><td class="num"><span class="hl-g">+13.5%</span></td></tr>
+            <tr><td>OTT / CTV</td><td class="num">1.12</td><td class="num"><span class="hl-g">+15.1%</span></td></tr>
+            <tr><td>電商廣告</td><td class="num">0.72</td><td class="num"><span class="hl-g">+14.8%</span></td></tr>
+            <tr><td>遊戲廣告</td><td class="num">0.20</td><td class="num"><span class="hl-g">+18.2%</span></td></tr>
+            <tr><td><b>數位廣告合計</b></td><td class="num"><b>5.65</b></td><td class="num"><b class="hl-g">+10.9%</b></td></tr>
+            <tr><td>總廣告</td><td class="num">6.53</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tiny">2029 年數位廣告預估 US$8.13B，CAGR 12.9%。來源：Research and Markets, <i>Databook Q1 2026: Taiwan</i>（2026-02-10, GLOBE NEWSWIRE）</p>
+    </div>
+    <div>
+      <div class="tablewrap" style="margin-top:0">
+        <table>
+          <thead><tr><th>台灣基礎數據</th><th class="num">數值</th></tr></thead>
+          <tbody>
+            <tr><td>人口</td><td class="num">2,310 萬</td></tr>
+            <tr><td>都市化率</td><td class="num">80.9%</td></tr>
+            <tr><td>手機持有率</td><td class="num">92%</td></tr>
+            <tr><td>行動搜尋佔比</td><td class="num">78%</td></tr>
+            <tr><td>數位廣告佔總廣告</td><td class="num">69%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tiny">來源：DataReportal, <i>Digital 2026: Taiwan</i>；廣告佔比來自 R&amp;M。</p>
+
+      <div class="callout warn" style="font-size:13px">
+        <b>⚠️ 資料矛盾揭露：</b>另有第三方推估（StateGlobe）將台灣數位廣告詐欺率估為 <b>8.4%</b>，此數字若以不同母體計算，會導出與 Research and Markets 的廣告規模估算互相衝突的結果。本報告<b>以 Research and Markets 為主基準</b>（具明確類別拆分、基期與 CAGR 口徑）；StateGlobe 數字不作為定論依據，僅在此揭露以避免誤用。
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>創作者經濟的供給端真相：</b>全球 200M+ 創作者中，僅約 <b>5%</b> 年收入 &gt; US$100K，<b>67%</b> 年收入 &lt; US$10K；免費轉付費的轉換率僅 <b>2–5%</b>（CreatorIQ）。Goldman Sachs 預估創作者經濟規模從約 US$250B 成長至 2027 年約 US$480B。
+    <div class="small" style="margin-top:8px"><b>對平台的意義：</b>「讓別人來發內容、平台抽成」在供給端是紅海（幾百萬創作者願意免費做），需求端轉換率極低。除非你有極強分發能力或極高價值的垂直需求，<b>不要作為主要商業模式</b>。</div>
+  </div>
+
+  <h3>台灣金流成本基準（2026）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>服務商</th><th class="num">信用卡</th><th class="num">虛擬帳號</th><th class="num">超商</th><th class="num">撥款速度</th></tr></thead>
+      <tbody>
+        <tr><td>綠界 ECPay</td><td class="num">2.75% + NT$1／筆</td><td class="num">1%（最低 NT$15）</td><td class="num">NT$31</td><td class="num">T+10</td></tr>
+        <tr><td>藍新</td><td class="num">2.8%（含稅）</td><td class="num">1%（最低 NT$10）</td><td class="num">NT$28</td><td class="num">T+10</td></tr>
+        <tr><td>PAYUNi</td><td class="num">2.8%（含稅）</td><td class="num">1%（最高 NT$15）</td><td class="num">NT$25</td><td class="num"><span class="hl-g">T+1 ~ T+2</span></td></tr>
+        <tr><td>LINE Pay</td><td class="num">3.0%</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Stripe</td><td class="num">2.9% + NT$10</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>Shopify Payments</td><td class="num">2.0–2.9%</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td>台灣 Pay</td><td class="num">0 – 1.5%</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h4>低價產品走不通信用卡</h4><p class="small muted">單價 &lt; NT$300 若走信用卡，NT$1／筆固定費會把有效費率拉高到 4% 以上。<b>低價產品應導向虛擬帳號／超商。</b></p></div>
+    <div class="card"><h4>撥款速度影響現金週期</h4><p class="small muted">T+10 的服務商在備貨或預付型訂閱模式下會壓縮現金週期。若現金流吃緊，PAYUNi 的 T+1~T+2 有實質價值。</p></div>
+    <div class="card"><h4>3% 是基準線</h4><p class="small muted">若你的模型在扣完 3% 後不成立，它多半在真實世界中也不成立 —— 這是規劃時最有效的一次自我檢查。</p></div>
+  </div>
+
+  <h3>平台抽成與聯盟基準</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>模式</th><th class="num">市場基準抽成</th><th>操作含意</th></tr></thead>
+      <tbody>
+        <tr><td>Substack</td><td class="num">10% + Stripe 約 12% ≈ <b>22%</b></td><td rowspan="4" class="muted small">會員制平台的<b>總抽成上限約 20–25%</b>。超過這個水準，使用者會離開去做 Substack 式的手動訂閱。聯盟佣金率 20–40% vs Amazon 1–4.5% 的 20 倍差距，決定了品類選擇。</td></tr>
+        <tr><td>Patreon</td><td class="num">8–12%</td></tr>
+        <tr><td>OnlyFans</td><td class="num">20%</td></tr>
+        <tr><td>SaaS 聯盟佣金</td><td class="num"><span class="hl-g">20–40%</span></td></tr>
+        <tr><td>Amazon 聯盟佣金</td><td class="num"><span class="hl-a">1–4.5%</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ LEGAL MODELS ============ -->
+<section id="legal">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 03</div>
+    <h2>正規經營模式（8 個模型）</h2>
+    <p class="lead">以固定成本 <b>NT$6 萬／月</b> 為基準推估損益平衡點。計算方式：<code>(固定成本 + 變動成本) ÷ (單價 × (1 − 支付費率 − 平台費率))</code>。以上為模型推估，非引用實績。</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>ID</th><th>模式</th><th>主要收入</th><th class="num">損益平衡點</th><th class="num">見現金流</th><th>護城河</th><th>推薦度</th></tr></thead>
+      <tbody>
+        <tr><td><b>M7</b></td><td>產業代營運／技術服務</td><td>專案費＋月費</td><td class="num hl-g"><b>3 個專案客戶</b>（NT$2 萬／月）</td><td class="num hl-g">30–60 天</td><td>產業 Know-how + 信任</td><td><span class="tag g">★★★★★ 主攻</span></td></tr>
+        <tr><td><b>M1</b></td><td>付費專業社群</td><td>會員訂閱</td><td class="num">231 付費會員（ARPU NT$299）</td><td class="num">90–180 天</td><td>社群網絡 + 專家密度</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td><b>M6</b></td><td>產業情報訂閱</td><td>訂閱制</td><td class="num">16 客戶（NT$3,900／月）</td><td class="num">120–210 天</td><td>資訊不對稱</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td><b>M3</b></td><td>B2B 垂直工具（SaaS）</td><td>月費</td><td class="num">32 客戶（NT$1,990／月）</td><td class="num">150–240 天</td><td>資料壁壘 + 流程嵌合</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td><b>M5</b></td><td>垂直撮合市集</td><td>抽成</td><td class="num">月 GMV NT$83 萬（139 筆；抽成 10%）</td><td class="num">120–210 天</td><td>供需雙邊規模</td><td><span class="tag a">★★★☆☆</span></td></tr>
+        <tr><td><b>M2</b></td><td>數位產品／課程</td><td>一次性 + 訂閱</td><td class="num">25 份／月（NT$2,900）</td><td class="num">30–90 天</td><td>製作能力 + 名氣</td><td><span class="tag a">★★★☆☆</span></td></tr>
+        <tr><td><b>M4</b></td><td>聯盟內容電商</td><td>聯盟佣金</td><td class="num">需先有站點流量</td><td class="num">90–150 天</td><td>SEO + 內容資產</td><td><span class="tag v">★★☆☆☆</span></td></tr>
+        <tr><td><b>M8</b></td><td>廣告內容平台</td><td>廣告收益</td><td class="num hl-r">40 萬頁瀏覽／月（淨 RPM NT$150）</td><td class="num">180–365 天</td><td>需巨大流量門檻</td><td><span class="tag r">★☆☆☆☆ 不建議</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>M7 · 產業代營運／技術服務<span class="tag g" style="margin-left:8px">最推薦</span></h3>
+  <div class="card tg">
+    <p class="small"><b>這是什麼：</b>不先做平台，而是先做「替產業客戶營運既有社群／官網／LINE 官方帳號／會員系統／活動」的服務。</p>
+    <div class="grid g4" style="margin-top:12px">
+      <div><h4>最低損益平衡</h4><p class="small muted">3 個客戶（NT$2 萬／月），所有模式中最低</p></div>
+      <div><h4>最快見錢</h4><p class="small muted">30–60 天可收到第一筆，且是合約收入而非流量</p></div>
+      <div><h4>合法驗證痛點</h4><p class="small muted">避開灰色模式最常踩的「不知道真實需求」死穴</p></div>
+      <div><h4>自然演化成產品</h4><p class="small muted">可重複流程、行業資料、案例 → M3 的 SaaS 或 M6 的情報</p></div>
+    </div>
+    <div class="callout warn" style="margin-top:12px;margin-bottom:0">
+      <b>主要風險：</b>這是人力密集事業，不是可規模化的平台事業。若長期停在 M7，需在 12–18 個月內產品化，否則天花板等於你的工時。<br>
+      <b>收費結構：</b>NT$15,000–30,000／月 retainer ＋ 一次性建置費 NT$30,000–80,000。<br>
+      <b>成功指標：</b>單客月費 &gt; NT$20,000、續約率 &gt; 70%、交付每客工時 &lt; 12 小時／月。
+    </div>
+  </div>
+
+  <h3>M1 · 付費專業社群</h3>
+  <div class="card t">
+    <p class="small"><b>這是什麼：</b>針對一個明確職業／產業的付費會員制社群，核心價值是「同行人脈 + 篩選過的資訊 + 詢問解答」。</p>
+    <div class="formula">ARPU                  = NT$299／月
+支付 + 平台費率        = 3.0%（信用卡）
+會員月留存率           = 87%（假設）
+── 靜態損益平衡（不考慮流失補充）──
+每會員月營業貢獻       = 299 × 0.97 ≈ NT$290
+所需付費會員           = 60,000 ÷ 290 ≈ 207 人
+── 含留存折算的穩態需求（保守規劃值）──
+穩態所需付費會員       = 60,000 ÷ (299 × 0.87) ≈ 231 人</div>
+    <p class="small muted"><b>231 人</b>是保守的規劃值，也是實務上可行的規模（目標客群若為 5,000 人的產業，轉換率約 4.6%）。純靜態損益平衡點為 <b>207 人</b> —— 差額 24 人代表「流失補充與自然成長所需的安全餘裕」。試算器 A 套用 M1 預設會得到 207，兩者口徑一致。</p>
+    <div class="grid g2" style="margin-top:12px">
+      <div><h4>四個關鍵設計原則</h4>
+        <ul class="small muted" style="padding-left:18px;line-height:2">
+          <li>收費門檻要低、價值要明確（NT$299 容易過第一道心理關）</li>
+          <li><b>人脈密度 &gt; 人數</b>：231 人中可回覆問題的人數不足 30 人，價值會崩塌</li>
+          <li>必須有可帶走的資產：年度產業報告、資料庫、錄音檔</li>
+          <li>年費方案 NT$2,990／年（折讓不超過 17%），可顯著改善現金流</li>
+        </ul>
+      </div>
+      <div><h4>AI 時代的特殊風險</h4>
+        <p class="small muted">AIO 讓「免費內容 + AI 摘要」足以滿足 80% 的資訊需求。M1 的價值必須建立在 <b>AI 無法提供的東西</b>：即時的同儕回覆、信任過的人脈、可信的身份驗證。</p>
+        <p class="small muted">這也是為什麼 M1 要「人」為核心而非「內容」為核心。</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>M6 · 產業情報訂閱</h3>
+  <div class="card t">
+    <div class="formula">單價 = NT$3,900／月；支付費率 2.8%
+每客戶月貢獻 = 3,900 × 0.972 ≈ NT$3,791
+所需客戶數 = 60,000 ÷ 3,791 ≈ 16 人</div>
+    <p class="small muted"><b>為什麼只有 16 個客戶：</b>高單價本身就是護城河 —— 客戶決策成本高、替換成本高、流失率低（可達 2–3%／月）。</p>
+    <div class="grid g2" style="margin-top:12px">
+      <div><h4>門檻</h4><p class="small muted">需要真正的獨家來源（政府資料、產業協會、內部數據、實地採訪），否則 AI 摘要就足以替代。</p></div>
+      <div><h4>風險</h4><p class="small muted">交付責任重 —— 情報錯一個數字，信譽歸零。金融、醫療、法律類情報還會帶來「無證發表」風險，須明確標示引用來源。</p></div>
+    </div>
+  </div>
+
+  <h3>M3 · B2B 垂直工具（SaaS）</h3>
+  <div class="card t">
+    <div class="formula">單價 = NT$1,990／月；支付費率 2.8%（若透過代收）
+每客戶月貢獻 = 1,990 × 0.972 ≈ NT$1,934
+所需客戶數 = 60,000 ÷ 1,934 ≈ 32 人</div>
+    <p class="small muted">32 個 B2B 客戶是可以做到的規模，但前提是「一個客戶＝一個公司」，且你已在該產業有信任 —— <b>這正是 M7 的產出</b>。</p>
+    <div class="grid g2" style="margin-top:12px">
+      <div><h4>設計原則</h4>
+        <ul class="small muted" style="padding-left:18px;line-height:2">
+          <li><b>單一流程優先</b>：先解決一個「每月一定會痛」的問題，不要做產業全家桶</li>
+          <li><b>資料壁壘</b>：能累積歷史資料的功能（報價歷史、庫存趨勢、稽核軌跡）是日後的定價權來源</li>
+          <li><b>不要自己收金流</b>：避免觸及第三方支付業登記與電子發票作業負擔</li>
+          <li><b>可離開性設計</b>：客戶資料可匯出 —— 對「綁定」的抗拒遠大於對「不好用」的抗拒</li>
+        </ul>
+      </div>
+      <div><h4>垂直機會範例</h4>
+        <p class="small muted">建材報價管理、診所排班、長照排班、進銷存、報廢單據辨識、工程驗收紀錄、小型物流回單管理…</p>
+        <p class="small muted"><b>選擇原則：</b>台灣中小企業高度依賴 LINE 與 Excel，且抗拒綁定 —— 這是垂直 SaaS 的結構性機會。</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>M5 · 垂直撮合市集</h3>
+  <div class="card t">
+    <div class="formula">平台抽成 10%；每筆成交額平均 NT$6,000
+支付通道費 2.8%（由平台端代收並負擔，對成交額收取）
+
+── 每筆營業貢獻 ──
+抽成收入   = 6,000 × 10%   = NT$600
+支付通道費 = 6,000 × 2.8%  = NT$168
+每筆貢獻   = 600 − 168     = NT$432
+
+── 損益平衡 ──
+所需成交筆數 = 60,000 ÷ 432 ≈ 139 筆／月
+月 GMV 需求  = 139 × 6,000 ≈ NT$83 萬</div>
+    <p class="tiny">口徑說明：支付通道費是對<b>成交總額</b>收取、抽成是對<b>平台收入</b>計算，兩者基數不同，不能直接相乘。若改為「賣方自行負擔通道費」，每筆貢獻為 NT$600，所需 GMV 約 NT$60 萬 —— 這是平台議價能力的直接反映。</p>
+    <p class="small muted"><b>核心挑戰：冷啟動的雙邊死結。</b>市集需要供需同時到位，而供需各自的等待成本不同 —— 這是經典的「雞蛋問題」。</p>
+    <div class="tablewrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>單邊先行策略</th><th>做法</th><th>代價</th></tr></thead>
+        <tbody>
+          <tr><td>需求側先行</td><td>先密集供應，再倒推供給</td><td>早期品質落差高</td></tr>
+          <tr><td>供給側先行</td><td>用補貼 / 保證單量吸引供給</td><td>需要現金，且可能引發「洗單」</td></tr>
+          <tr><td>垂直單邊鎖定</td><td>只做一個極窄供需型態</td><td>天花板低但存活率高</td></tr>
+          <tr><td>人工撮合過渡</td><td>初期人工配對 + 收服務費</td><td>非純平台，但有現金流</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout danger" style="margin-bottom:0"><b>務必設計的反弊機制：</b>實名驗證、交易履約追蹤、評分機制、退款與爭議處理。撮合市集最常見的死亡原因是「一開始的假成交破壞了信任」 —— 這也是許多灰色代收模式的犯罪溫床（見 G2）。</div>
+  </div>
+
+  <h3>M2 · 數位產品／課程 &nbsp;·&nbsp; M4 聯盟內容電商 &nbsp;·&nbsp; M8 廣告內容平台</h3>
+  <div class="grid g3">
+    <div class="card t">
+      <h4>M2 數位產品／課程</h4>
+      <div class="formula" style="font-size:12.5px;margin:10px 0">單價 NT$2,900；費率 2.8%
+每筆貢獻 ≈ NT$2,819
+所需銷量 = 60,000 ÷ 2,819 ≈ 22 份／月（保守 25）</div>
+      <p class="small muted"><b>優勢：</b>製作完成後邊際成本近零，現金流最快（30–90 天）。</p>
+      <p class="small muted"><b>致命弱點：</b>需持續獲客，而 AIO 時代買流量或做 SEO 的成本正在急升。</p>
+      <p class="small muted"><b>建議：</b>當作 M1／M6 的<b>銷售前端</b>，而非獨立生意 —— 免費文章或試用課 → 付費社群或情報訂閱。</p>
+    </div>
+    <div class="card t">
+      <h4>M4 聯盟內容電商</h4>
+      <p class="small muted"><b>數字基準：</b>Amazon 聯盟佣金 1–4.5%；SaaS 聯盟佣金 20–40%。<b>佣金率是 20 倍差距</b>，這決定了品類選擇。</p>
+      <ul class="small muted" style="padding-left:18px;line-height:2">
+        <li><b>放棄</b>低佣金的一般商品電商（1–4.5% 需要巨大流量）</li>
+        <li>聚焦<b>高佣金 B2B SaaS／服務類</b>（20–40%）或高單價、利潤厚、直接品牌的商品</li>
+        <li>佣金 30% 時，每 NT$1,000 成交 = NT$300；頁面轉換 1% 等效 RPM ≈ NT$3，遠優於台灣一般媒體 RPM</li>
+      </ul>
+      <p class="small muted"><b>前置條件：</b>必須先有站點流量（M8 的規模），順序應在 M8 之後。</p>
+    </div>
+    <div class="card tr">
+      <h4>M8 廣告內容平台 <span class="tag r" style="margin-left:4px">不建議新進</span></h4>
+      <ol class="small muted" style="padding-left:18px;line-height:1.95">
+        <li><b>紅海</b>：台灣已有大量成熟媒體與 YouTuber，新進者無流量壁壘</li>
+        <li><b>演算法風險</b>：AI 內容農場的懲罰已降臨，新站沒有歷史信用可抵禦</li>
+        <li><b>RPM 貶值</b>：媒體 RPM 從 US$30–50 掉到 US$12–22 且持續下跌</li>
+        <li><b>門檻過高</b>：損益平衡需 40 萬瀏覽／月（對應淨 RPM 約 NT$150／千次瀏覽），新站等於數年爬升期</li>
+        <li><b>變現工具門檻提高</b>：Ezoic 自 2026/02 起為 250,000 月使用者</li>
+      </ol>
+      <div class="callout" style="margin:12px 0 0;font-size:13px">
+        <b>唯一例外：</b>若你已擁有某垂直領域的<b>獨家內容來源</b>且商業價值足以支撐 40 萬／月瀏覽，應該直接做 <b>M6</b>（付費情報訂閱）而非 M8 —— M6 的 ARPU 是 M8 RPM 的數十倍。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GRAY ZONE ============ -->
+<section id="gray">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 04</div>
+    <h2>灰色地帶模式（8 個模型）</h2>
+    <p class="lead">評估灰色模式的唯一理性方法，不是「會不會被抓」，而是<b>把被抓放進期望值計算</b>。</p>
+  </div>
+
+  <h3>4.0 分析框架：期望值與臨界機率</h3>
+  <div class="grid g2" style="margin-bottom:12px">
+    <div>
+      <div class="formula">EV = (1 − P) × T × C − P × L</div>
+      <div class="tablewrap" style="margin-top:0">
+        <table>
+          <thead><tr><th>符號</th><th>意義</th></tr></thead>
+          <tbody>
+            <tr><td><code>C</code></td><td>月營業貢獻 = 收入 − 變動成本 − 固定成本分攤</td></tr>
+            <tr><td><code>T</code></td><td>預期存活月數（未被查獲前可營運的月數）</td></tr>
+            <tr><td><code>P</code></td><td>被查獲機率（觀察期間累積）</td></tr>
+            <tr><td><code>L</code></td><td>單次事故損失 = 罰金 + 沒入 + 追繳 + 刑罰成本 + 商譽損失</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="formula">P* = T × C ÷ L</div>
+      <div class="callout warn" style="margin-top:0">
+        <b>判讀：</b>若 <b>P &lt; P*</b>，期望值為正；<b>P &gt; P*</b> 則期望值為負。<br>
+        <b>P\* 越高，代表這個模式越不成立</b> —— 它要求你「幾乎不可能被查」。
+      </div>
+      <div class="callout" style="margin-top:10px">
+        <b>參數說明：</b><br>
+        · <code>P</code> 不是抽象機率，而是由<b>交易結構</b>決定：是否進入金流、是否跨境、金額是否觸及門檻、是否用真人客服、是否涉及多家公司主體。<br>
+        · <code>L</code> 的不確定性最大，且<b>與規模正相關</b>。<br>
+        · <code>T</code> 由外部法律環境決定，<b>不由你控制</b>。
+      </div>
+    </div>
+  </div>
+
+  <h3>4.1 八個灰色模型總覽</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>ID</th><th>模式</th><th class="num">月貢獻 C</th><th class="num">存活月數 T</th><th class="num">總貢獻</th><th class="num">事故損失 L</th><th class="num">P*</th><th>判定</th></tr></thead>
+      <tbody>
+        <tr><td><b>G1</b></td><td>未授權內容聚合（盜轉載站／影音聚合）</td><td class="num">255,000</td><td class="num">18</td><td class="num">459 萬</td><td class="num">500 萬</td><td class="num hl-r"><b>91.8%</b></td><td><span class="tag r">實質不可行</span></td></tr>
+        <tr><td><b>G2a</b></td><td>博弈代收付・規模化高抽成（3.5%）</td><td class="num">490,000</td><td class="num">9</td><td class="num">441 萬</td><td class="num">1,500 萬</td><td class="num hl-a"><b>29.4%</b></td><td><span class="tag a">需近乎不被查</span></td></tr>
+        <tr><td><b>G2b</b></td><td>博弈代收付・小規模低抽成（0.35%）</td><td class="num">49,000</td><td class="num">12</td><td class="num">58.8 萬</td><td class="num">1.47 億</td><td class="num hl-g"><b>0.4%</b></td><td><span class="tag a">非事業，是低薪高風險</span></td></tr>
+        <tr><td><b>G3</b></td><td>未申報收入／逃漏稅</td><td class="num">250,000</td><td class="num">30</td><td class="num">750 萬</td><td class="num">1,500 萬</td><td class="num hl-a"><b>50.0%</b></td><td><span class="tag a">申報資料必然對帳</span></td></tr>
+        <tr><td><b>G4</b></td><td>仿冒品牌／水貨電商</td><td class="num">200,000</td><td class="num">12</td><td class="num">240 萬</td><td class="num">800 萬</td><td class="num hl-a"><b>30.0%</b></td><td><span class="tag a">品牌方主動追訴</span></td></tr>
+        <tr><td><b>G5</b></td><td>帳號共享／訂閱轉售</td><td class="num">120,000</td><td class="num">24</td><td class="num">288 萬</td><td class="num">300 萬</td><td class="num hl-r"><b>96.0%</b></td><td><span class="tag r">幾乎必被偵破</span></td></tr>
+        <tr><td><b>G6</b></td><td>AI 內容農場（多數情況下合法）</td><td class="num">7.8–27.5 萬</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td><span class="tag r">商業上已死亡</span></td></tr>
+        <tr><td><b>G7</b></td><td>未標示 AI 生成／醫療保健內容建議</td><td class="num">180,000</td><td class="num">18</td><td class="num">324 萬</td><td class="num">250 萬</td><td class="num hl-r"><b>129.6%</b></td><td><span class="tag r">數學上不可能</span></td></tr>
+        <tr><td><b>G8</b></td><td>爬蟲抓取／未同意使用他人資料</td><td class="num">100,000</td><td class="num">24</td><td class="num">240 萬</td><td class="num">400 萬</td><td class="num hl-a"><b>60.0%</b></td><td><span class="tag a">一次函告即暴露</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout danger">
+    <b>數據矛盾揭露（方法論聲明）：</b><code>L</code> 是本框架估計誤差最大的參數。以 G2 為例，若 L 從 NT$1,500 萬變動至 NT$3,000 萬，P* 會從 29.4% 跳到 14.7%（整整一倍）；若 L 變動至 NT$750 萬，P* 會升至 58.8%。<b>這種敏感度本身就是結論：灰色模式的期望值不可控。</b>本報告所有 P* 皆為模型推估，非引用實績。
+  </div>
+
+  <h3>4.2 為什麼灰色模式的期望值隨規模遞減（而非遞增）</h3>
+  <p class="lead">這是本報告的核心分析。大部分人直覺是「做越大賺越多」，但灰色模式有四個反向機制。</p>
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card ta">
+      <h4>機制一 · 偵測機率與規模正相關（集中度）</h4>
+      <ul class="small muted" style="padding-left:18px;line-height:1.95">
+        <li>金額越大，越可能被金融機構列入<b>可疑交易通報</b>（依洗錢防制法需通報）</li>
+        <li>跨境結算越多，越容易觸發<b>國際司法協查</b></li>
+        <li>對象越多，個資與金流資料越容易被<b>交叉比對</b></li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">2026 年調查局已通報 <b>7,240 條</b>可疑交易（2 波），並偵破手機農場案 —— 249 支手機、42.2 億港幣。偵測是<b>批次式</b>的，不是隨機抽查。</p>
+    </div>
+    <div class="card ta">
+      <h4>機制二 · 事故損失的超線性增長</h4>
+      <ul class="small muted" style="padding-left:18px;line-height:1.95">
+        <li><b>洗錢防制法 6 條</b>：2 年以下、NT$500 萬以下，<b>法人併罰 10 倍</b> → 金額越大，法定刑與併罰基數越高</li>
+        <li><b>著作權法 88 條</b>：權利人可請求<b>侵害人所得利益</b>或<b>損害額 × 3</b> → 賺得越多，被追回越多</li>
+        <li><b>刑法 266 條</b>：5 年以下 → 個人與公司的全部帳戶、資產均可能被查封</li>
+      </ul>
+    </div>
+    <div class="card ta">
+      <h4>機制三 · 貢獻與偵測同向</h4>
+      <p class="small muted">收入 C 上升的每一個來源，同時也是增加偵測曝險的來源 —— 付款人更多、金額更大、交易更雜。</p>
+    </div>
+    <div class="card ta">
+      <h4>機制四 · 生存終點由外部決定</h4>
+      <p class="small muted"><code>T</code> 不是你的 KPI，而是司法與行政程序的進度。<b>你無法「做久一點」，只能「做小一點」。</b></p>
+    </div>
+  </div>
+  <div class="formula">EV(C) = (1 − P(C)) × T(C) × C − P(C) × L(C)
+其中 P(C)↑、T(C)↓、L(C)↑（且超線性）
+→ EV 呈倒 U 型，峰值落在極小的規模</div>
+  <div class="callout danger"><b>實務含意：</b>灰色模式只有一個「甜蜜點」—— 小到不起眼、大到足以養活你。而這個甜蜜點的問題是：它沒有護城河、沒有資產、沒有累積性，一旦被偵測就歸零，而且你無法把它變成事業。</div>
+
+  <h3>4.3 G6：AI 內容農場 —— 合法，但經濟上已死亡</h3>
+  <div class="card tr">
+    <p class="small">很多人以為 AI 農場是灰色地帶，但它的問題<b>不是法律，是經濟</b>。</p>
+    <div class="formula" style="margin:12px 0">AntiSlop 2026 實測：
+單站 50 篇／日 → 1,500 篇／月 → 75,000 月流量
+→ US$2–5 RPM → US$150–375／月／站
+50 站規模：月營收 US$7,500–18,750、成本 US$5,000–10,000 → 月獲利 US$2,500–8,750
+（換算約 NT$7.8 萬 – 27.5 萬／月，USD/TWD ≈ 31.4）</div>
+    <ol class="small muted" style="padding-left:20px;line-height:2">
+      <li><b>Google 2026/10/08 核心更新</b>針對「Content Mills 2.0」，引入<b>跨站內容模式比對</b> —— 直接針對「大量同質 AI 站」的共同特徵，觸發整站降權</li>
+      <li><b>HCU 已移除約 40% 目標內容</b>（2024/03 起）</li>
+      <li><b>雲端殭屍佔全部流量 57.5%</b> —— 你以為的「流量」，有超過一半是機器人</li>
+      <li><b>AI 爬蟲抓走你的內容</b>：數百至數千頁／爬蟲 vs 傳統約 5 頁／訪客；依 TIPO 2025 指引，AI 訓練涉重製須授權或主張合理使用</li>
+      <li><b>RPM 只剩 US$2–5</b>，遠低於 Ezoic 等工具的准入門檻（2026/02 起為 250,000 月使用者）</li>
+    </ol>
+    <div class="callout" style="margin-bottom:0"><b>結論：</b>G6 不是「被抓」的問題，是「沒有護城河 + 演算法隨時把你歸零」的問題。而且它拿不到 4.2 節所述的任何灰色優勢（沒有代收金流、沒有侵權、沒有法規紅線）—— <b>純粹的負期望值</b>。</div>
+  </div>
+
+  <h3>4.4 真實案例：司法結果（灰色地帶的實際定價）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>案件</th><th>規模</th><th>司法結果</th><th>對應模型</th></tr></thead>
+      <tbody>
+        <tr><td>台中 YD Payment</td><td>14 家人頭公司、代收 <b>NT$13.99 億</b>、抽成 3.5%、扣住 USDT 1,319 萬顆（市值 NT$4.21 億）</td><td><b>8 人起訴</b></td><td>G2a</td></tr>
+        <tr><td>高雄「台灣里」</td><td>81 家人頭公司、95 家博弈站、33 億洗錢、70 億金流、<b>7 億獲利</b></td><td><b>166 人公訴</b>、主嫌 10 年 + <b>1 億罰金</b></td><td>G2a / G5</td></tr>
+        <tr><td>台北檢察署「豪杰」</td><td>代收 <b>NT$306 億</b></td><td>35 人起訴、主嫌 <b>9 年 6 月</b></td><td>G2a</td></tr>
+        <tr><td>台中「Buyme out」</td><td>63 家博弈站、39.8 億洗錢、1.23 億獲利</td><td>26 人起訴、現金發薪 3.5–7 萬／月</td><td>G2a / G5</td></tr>
+        <tr><td>新北遊戲點數案</td><td>以 MyCard 點數掩護、21.5 億洗錢</td><td>15 人起訴、沒收所得 5,468 萬</td><td>G2a / G8</td></tr>
+        <tr><td>調查局 2026 偵辦</td><td>54 億洗錢</td><td>9 人羈押禁見、15 人交保 4–20 萬</td><td>多案</td></tr>
+        <tr><td>調查局手機農場</td><td>249 支手機</td><td>42.2 億港幣規模</td><td>G4 / G5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card ta"><h4>從案例萃取的 5 個事實</h4>
+      <ol class="small muted" style="padding-left:19px;line-height:1.95">
+        <li><b>人頭公司是標準配置</b>：「81 家 / 14 家 / 63 家」顯示灰色模式在擴張時必然需要大量空殼，而空殼數量本身就是偵測特徵</li>
+        <li><b>刑度極重</b>：主嫌 9 年 6 個月、10 年 + 1 億罰金。要合理補償這個刑度，報酬必須高到多數人不敢做 —— 撐到有規模的人，本質上在賭自己被抓</li>
+        <li><b>員工也被追</b>：「現金發薪 3.5–7 萬」顯示有實際員工，而員工是穩定的汙染源（通訊、聊天、資金紀錄）</li>
+        <li><b>連點卡都被納入</b>：MyCard 點數與 USDT 都成為偵測入口 —— 「合法的支付工具」也會用來構成犯罪事實</li>
+        <li><b>金額是分水嶺</b>：306 億、70 億、39.8 億、33 億都會觸發跨層級的偵測資源投入。<b>金額一大，偵測機率是階躍式上升</b></li>
+      </ol>
+    </div>
+    <div class="card t"><h4>關鍵法規與灰色模式的接觸點</h4>
+      <div class="tablewrap" style="margin-top:8px">
+        <table style="min-width:420px">
+          <thead><tr><th>法規・條次</th><th>接觸點與罰則</th></tr></thead>
+          <tbody>
+            <tr><td><b>洗錢防制法 6 條</b></td><td>未登記經營第三方支付服務 → 2 年以下、NT$500 萬以下；<b>法人併罰 10 倍</b></td></tr>
+            <tr><td><b>營業項目 I301040</b></td><td>第三方支付服務業須登錄；截至 2026/03 僅 <b>51 家</b>核准</td></tr>
+            <tr><td><b>電信業法 2025 修法</b></td><td>IASP 須登記為電信事業；未登錄罰 NT$10–100 萬</td></tr>
+            <tr><td><b>刑法 266 條</b></td><td>網際網路賭博納入處罰 → 5 年以下</td></tr>
+            <tr><td><b>著作權法 3 / 87(1)(7)(8) / 88 條</b></td><td>未授權重製、公開傳播；可請求<b>侵害人所得利益</b></td></tr>
+            <tr><td><b>著作權法 91 條</b></td><td>重製；<b>意圖銷售或出租</b>加重：6 月–5 年 + NT$20–200 萬</td></tr>
+            <tr><td><b>著作權法 91-1 / 92 / 93 條</b></td><td>92 條 3 年以下 + 75 萬；93 條 2 年以下 + 50 萬</td></tr>
+            <tr><td><b>著作權法 97-1 條</b></td><td>意圖營業沒收、命停業或歇業</td></tr>
+            <tr><td><b>著作權法 100 條</b></td><td>92 條<b>非告訴乃論</b> → 可直接偵辦</td></tr>
+            <tr><td><b>著作權法 44–65 條</b></td><td>合理使用（法定列舉）</td></tr>
+            <tr><td><b>個資法 2025/11/14</b></td><td>外洩通報義務；蒐集利用須有特定目的與同意</td></tr>
+            <tr><td><b>AI 基本法</b></td><td>2025/12/23 立院三讀通過 → 風險分級、揭露義務</td></tr>
+            <tr><td><b>TIPO 2025 指引</b></td><td>AI 訓練涉重製須授權或主張合理使用；生成物若實質相似可能構成<b>改作</b></td></tr>
+            <tr><td><b>電子發票</b></td><td>2025/07/01 起全面上傳</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAP ============ -->
+<section id="map">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 05</div>
+    <h2>灰色 → 合法對照表</h2>
+    <p class="lead">這是本報告最具實用價值的部分。<b>每一個灰色模式，其實都對應一個合法的商業需求</b> —— 灰色模式之所以能存在，是因為它用非法手段滿足了某個真實（且大多數未被妥善服務的）需求。把那個需求合法地服務好，就是商業機會。</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>灰色模式</th><th>背後的真實需求</th><th>合法版本</th><th>對應模型</th><th class="num">轉換難度</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>代收境外博弈資金抽成</td><td>跨境商務收款不便、傳統管道費用高、審核慢</td><td><b>申請 I301040 第三方支付服務業登錄</b>，提供合規跨境收款</td><td>M7（支付閘道代營運）</td><td class="num"><span class="tag r">★★★★☆ 高</span></td></tr>
+        <tr><td>2</td><td>未授權內容聚合站</td><td>使用者找不到好用、離線、可信任的內容</td><td>合法授權的內容策展 + 付費深度整理 + AI 輔助摘要</td><td><b>M6 產業情報訂閱</b></td><td class="num"><span class="tag g">★★☆☆☆ 低</span></td></tr>
+        <tr><td>3</td><td>帳號共享轉售</td><td>訂閱制服務價格高、單人多開戶不符經濟</td><td>家庭／團隊／教育方案、多人授權管理、API 轉售</td><td>M5 垂直撮合 / M3 B2B 工具</td><td class="num"><span class="tag g">★★☆☆☆ 低</span></td></tr>
+        <tr><td>4</td><td>仿冒品牌低價轉售</td><td>正品價格高、買不到正品、跨國代購不便</td><td>合法跨境選品 + 保固 + 檢驗報告 + 價格透明</td><td>M4 聯盟內容電商</td><td class="num"><span class="tag a">★★★☆☆ 中</span></td></tr>
+        <tr><td>5</td><td>AI 農場大量產文</td><td>內容生產成本高、多語系覆蓋需求</td><td>垂直 AI 工具 + 人工編輯把關 + 品質評分機制</td><td>M2 數位產品 / M6 情報</td><td class="num"><span class="tag g">★★☆☆☆ 低</span></td></tr>
+        <tr><td>6</td><td>爬蟲抓取他人資料建檔</td><td>產業資訊分散、難以查詢</td><td>授權資料源 API、公開資料集、主動合作取得授權</td><td>M6 產業情報</td><td class="num"><span class="tag r">★★★★☆ 高</span></td></tr>
+        <tr><td>7</td><td>博弈站代付服務</td><td>玩家需要快速入金、有線下支付需求</td><td>若要合法，只能做「持牌博弈事業的入金通道」或完全退出</td><td>無直接合法版</td><td class="num"><span class="tag r">✕ 不建議</span></td></tr>
+        <tr><td>8</td><td>未標示 AI 生成 / 醫療保健建議</td><td>使用者需要快速、低成本的專業初步建議</td><td>AI 輔助 + 專業人士覆核 + 明確揭露 + 責任歸屬</td><td>M2 數位產品（附專業審閱）</td><td class="num"><span class="tag a">★★★☆☆ 中</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>三個通用轉換原則</h3>
+  <div class="grid g3">
+    <div class="card t">
+      <h4>原則一 · 不要在灰色版本上累積資產</h4>
+      <p class="small muted">灰色模式的累積性是假的。累積的「人脈」「名單」「演算法權重」「金流管道」在偵測時會被法院認定為犯罪工具，全數沒入。你真正能帶走的只有：<b>技能、產業理解、以及（在不違法的部分）客戶信任。</b></p>
+    </div>
+    <div class="card t">
+      <h4>原則二 · 灰色營收的「客戶端需求」才是護城河入口</h4>
+      <p class="small muted">如果有人在灰色環境下願意每月付 NT$3,000 給你，代表那個需求是真實的。<b>去找那個需求在合法市場中的解法</b>，通常比在灰色市場中賺更多、更穩。</p>
+    </div>
+    <div class="card t">
+      <h4>原則三 · 先做服務（M7），再收費產品化</h4>
+      <p class="small muted">灰色模式失敗的最大原因不是被抓，而是「沒有真正的用戶需求」。M7 讓你用合約現金流支撐探索期，並在合法框架內取得第一手需求資訊。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROFIT ============ -->
+<section id="profit">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 06</div>
+    <h2>營利潛力總評</h2>
+  </div>
+
+  <h3>6.1 正規模式的營利潛力排序（風險調整後 24 個月累計淨利）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="num">排名</th><th>模型</th><th class="num">24 個月累計淨利（推估）</th><th>營收可預測性</th><th>營收可擴張性</th><th>綜合</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><b>M7</b> 產業代營運／技術服務</td><td class="num hl-g">240–600 萬</td><td>★★★★★ 合約收入</td><td>★★☆☆☆ 受工時限制</td><td><span class="tag g">★★★★★</span></td></tr>
+        <tr><td class="num">2</td><td><b>M3</b> B2B 垂直工具</td><td class="num hl-g">300–900 萬</td><td>★★★★★ 月費</td><td>★★★★☆ 邊際成本低</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td class="num">3</td><td><b>M1</b> 付費專業社群</td><td class="num">150–450 萬</td><td>★★★★☆ 月費 + 年費</td><td>★★★★☆</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td class="num">4</td><td><b>M6</b> 產業情報訂閱</td><td class="num">120–400 萬</td><td>★★★★★ 少數高價客戶</td><td>★★★☆☆</td><td><span class="tag g">★★★★☆</span></td></tr>
+        <tr><td class="num">5</td><td><b>M2</b> 數位產品／課程</td><td class="num">60–300 萬</td><td>★★☆☆☆ 高度波動</td><td>★★★★★</td><td><span class="tag a">★★★☆☆</span></td></tr>
+        <tr><td class="num">6</td><td><b>M5</b> 垂直撮合市集</td><td class="num">80–500 萬</td><td>★★☆☆☆ 取決於 GMV</td><td>★★★★★</td><td><span class="tag a">★★★☆☆</span></td></tr>
+        <tr><td class="num">7</td><td><b>M4</b> 聯盟內容電商</td><td class="num">30–200 萬</td><td>★★☆☆☆</td><td>★★★★☆</td><td><span class="tag v">★★☆☆☆</span></td></tr>
+        <tr><td class="num">8</td><td><b>M8</b> 廣告內容平台</td><td class="num">0–150 萬</td><td>★☆☆☆☆</td><td>★★★★★</td><td><span class="tag r">★☆☆☆☆</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tiny">推估基礎（模型推估，非引用實績）：固定成本 NT$6 萬／月起算，第 1 年多數模式僅能打平或小賺；上表為「若在 24 個月內達到損益平衡點以上 1.5–3 倍營收」的情境推估。M7 下限假設僅維持 2–3 個專案客戶；M3 上限假設做到 120 個客戶。</p>
+
+  <h3>6.2 灰色模式的營利潛力排序（依期望值，非依帳面數字）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="num">排名</th><th>模式</th><th class="num">帳面月貢獻</th><th>期望值排序依據</th><th>結論</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>G2b 小規模低抽成</td><td class="num">NT$4.9 萬</td><td>P* = 0.4%（低）</td><td class="muted small">期望值可能為正，但<b>規模天花板極低、無累積性</b>；且「低調撐久 → 事故損失變大」是內生風險</td></tr>
+        <tr><td class="num">2</td><td>G2a 規模化高抽成</td><td class="num">NT$49 萬</td><td>P* = 29.4%，且 P 隨規模急升</td><td class="muted small">帳面大、期望值小；<b>擴張即崩壞</b></td></tr>
+        <tr><td class="num">3</td><td>G4 仿冒電商</td><td class="num">NT$20 萬</td><td>P* = 30.0%；品牌方主動追訴</td><td class="muted small">高機率被民事索賠與平台下架</td></tr>
+        <tr><td class="num">4</td><td>G3 逃漏稅</td><td class="num">NT$25 萬</td><td>P* = 50.0%；申報資料必然對帳</td><td class="muted small">時間拖得越久，累積欠稅越多</td></tr>
+        <tr><td class="num">5</td><td>G8 爬蟲／未同意資料</td><td class="num">NT$10 萬</td><td>P* = 60.0%；一次函告即暴露</td><td class="muted small">品牌方 + 平台 + 資料當事人三方壓力</td></tr>
+        <tr><td class="num">6</td><td>G6 AI 內容農場</td><td class="num">NT$7.8–27.5 萬</td><td>法律上安全，<b>商業上被演算法判死</b></td><td class="muted small">負期望值（無護城河）</td></tr>
+        <tr><td class="num">7</td><td>G7 未標示 AI／醫療建議</td><td class="num">NT$18 萬</td><td>P* = 129.6% &gt; 100%</td><td class="muted small">數學上不可能為正</td></tr>
+        <tr><td class="num">8</td><td>G5 帳號共享轉售</td><td class="num">NT$12 萬</td><td>P* = 96.0%；無護城河</td><td class="muted small">幾乎必被偵破</td></tr>
+        <tr><td class="num">—</td><td>G1 未授權內容聚合</td><td class="num">NT$25.5 萬</td><td>P* = 91.8%；著作權法 100 條非告訴乃論</td><td class="muted small">實質不可行</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>6.3 三個關鍵量化結論</h3>
+  <div class="grid g3">
+    <div class="card ta">
+      <h4>結論一 · 帳面營利與期望值排序幾乎相反</h4>
+      <p class="small muted">G2a 帳面月貢獻 NT$49 萬（是 G2b 的 10 倍），但期望值排序低於 G2b。因為規模同時放大 C 與 P、縮小 T、放大 L。<b>用「帳面數字」評估灰色模式，會系統性地選中最危險的那一個。</b></p>
+    </div>
+    <div class="card ta">
+      <h4>結論二 · 所有 P* &gt; 30% 等於「要求你 3 年不被查」</h4>
+      <p class="small muted">年度被查機率 30% 意味著 3 年累積被查機率 ≈ 66%。這在台灣的偵測密度下不現實。</p>
+    </div>
+    <div class="card ta">
+      <h4>結論三 · 灰色天花板低於正規模式的起步難度</h4>
+      <p class="small muted">G2b 期望值為正的甜蜜點，月貢獻約 NT$4.9 萬 —— 低於台灣工作月薪平均水準，且需承擔刑責風險。而 M7 的損益平衡（3 個客戶、NT$2 萬／月）在同樣風險水位下是<b>零法律風險</b>。</p>
+    </div>
+  </div>
+
+  <h3>6.4 容量與天花板對照</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>模式</th><th>損益平衡所需規模</th><th>24 個月可達規模</th><th>天花板限制</th></tr></thead>
+      <tbody>
+        <tr><td>M7</td><td class="num">3 客戶</td><td class="num">8–20 客戶</td><td>你的可交付工時</td></tr>
+        <tr><td>M1</td><td class="num">231 會員</td><td class="num">400–800 會員</td><td>目標產業總人數 × 轉換率</td></tr>
+        <tr><td>M3</td><td class="num">32 客戶</td><td class="num">60–150 客戶</td><td>垂直市場規模 × 滲透率</td></tr>
+        <tr><td>M6</td><td class="num">16 客戶</td><td class="num">25–60 客戶</td><td>資訊價值的支付意願上限</td></tr>
+        <tr><td>M2</td><td class="num">25 份／月</td><td class="num">40–150 份／月</td><td>流量取得成本</td></tr>
+        <tr><td>M5</td><td class="num">月 GMV 83 萬</td><td class="num">月 GMV 200–600 萬</td><td>雙邊規模效應（最難）</td></tr>
+        <tr><td>M4</td><td class="num">需既有流量</td><td class="num">—</td><td>流量 × 佣金率（最低）</td></tr>
+        <tr><td>M8</td><td class="num">40 萬頁瀏覽／月</td><td class="num">80–200 萬頁瀏覽／月</td><td>需要既有流量與信用</td></tr>
+        <tr><td><b>G2b</b></td><td class="num hl-a">NT$4.9 萬／月</td><td class="num hl-a">NT$4.9–8 萬／月</td><td class="hl-a">極低，且隨擴張 P 上升</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CALCULATORS ============ -->
+<section id="calc">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 07 · Interactive</div>
+    <h2>互動試算器</h2>
+    <p class="lead">以下兩個試算器可直接代入你的參數。所有計算邏輯與報告正文的模型一致，結果為<b>模型推估</b>。</p>
+  </div>
+
+  <!-- CALC A -->
+  <div class="calc" id="calcA">
+    <div class="calchead">
+      <div class="ic" style="background:rgba(34,211,238,.14);color:var(--cyan)">⚖</div>
+      <div>
+        <h3>試算器 A · 損益平衡規模試算</h3>
+        <p>算出你的模式需要多少付費客戶／訂單／頁瀏覽才能不虧錢</p>
+      </div>
+    </div>
+    <div class="calcbody">
+      <div>
+        <div class="field">
+          <label>快速套用模型 <span class="hint">（套用後仍可自由修改）</span></label>
+          <select id="aPreset">
+            <option value="">— 請選擇 —</option>
+            <option value="M1">M1 付費專業社群（ARPU 299）</option>
+            <option value="M2">M2 數位產品／課程（單價 2,900）</option>
+            <option value="M3">M3 B2B 垂直工具（月費 1,990）</option>
+            <option value="M5">M5 垂直撮合市集（客單 6,000／抽成 10%）</option>
+            <option value="M7">M7 產業代營運（月費 20,000；B2B 匯款 0 通道費）</option>
+            <option value="M8">M8 廣告內容平台（淨 RPM NT$150／千次瀏覽）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>計價模式</label>
+          <select id="aMode">
+            <option value="unit">單價制 — 會員／客戶／份</option>
+            <option value="take">抽成制 — 撮合成交</option>
+            <option value="rpm">流量制 — 廣告頁瀏覽</option>
+          </select>
+        </div>
+
+        <div id="aFieldsUnit">
+          <div class="field">
+            <label>單價（NT$／月 或 NT$／次）</label>
+            <input type="number" id="aPrice" value="299" min="1" step="1">
+          </div>
+          <div class="field">
+            <label>支付 + 平台費率（%）</label>
+            <input type="number" id="aFee" value="3.0" min="0" max="99" step="0.1">
+          </div>
+          <div class="field">
+            <label>每單位變動成本（NT$，不含支付費）</label>
+            <input type="number" id="aVar" value="0" min="0" step="1">
+          </div>
+        </div>
+
+        <div id="aFieldsTake" style="display:none">
+          <div class="field">
+            <label>平均客單價（NT$／筆）</label>
+            <input type="number" id="aAov" value="6000" min="1" step="100">
+          </div>
+          <div class="field">
+            <label>平台抽成率（%）</label>
+            <input type="number" id="aTake" value="10" min="0" max="99" step="0.5">
+          </div>
+          <div class="field">
+            <label>支付費率（%，對成交額）</label>
+            <input type="number" id="aFee2" value="2.8" min="0" max="99" step="0.1">
+          </div>
+          <div class="field">
+            <label>每筆變動成本（NT$）</label>
+            <input type="number" id="aVar2" value="0" min="0" step="1">
+          </div>
+        </div>
+
+        <div id="aFieldsRpm" style="display:none">
+          <div class="field">
+            <label>每千次頁瀏覽收益 RPM（NT$）</label>
+            <input type="number" id="aRpm" value="45" min="1" step="1">
+          </div>
+          <div class="field">
+            <label>每千次瀏覽變動成本（NT$）</label>
+            <input type="number" id="aRpmVar" value="0" min="0" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>固定成本（NT$／月）</label>
+          <input type="number" id="aFixed" value="60000" min="0" step="1000">
+        </div>
+        <div class="btnrow">
+          <button class="btn" onclick="calcA()">重新計算</button>
+          <button class="btn ghost" onclick="resetA()">重設為報告預設</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="result" id="aOut">
+          <h4>損益平衡結果</h4>
+          <div class="rrow"><span class="k">所需付費客戶／單位</span><span class="v" id="aUnits">—</span></div>
+          <div class="rrow"><span class="k">對應月營收</span><span class="v" id="aRev">—</span></div>
+          <div class="rrow"><span class="k">對應年營收</span><span class="v" id="aRevY">—</span></div>
+          <div class="rrow"><span class="k">單位名稱</span><span class="v" id="aUnitName" style="font-size:15px">—</span></div>
+          <div class="rrow"><span class="k">單單位營業貢獻</span><span class="v" id="aUnitC" style="font-size:15px">—</span></div>
+        </div>
+        <div class="verdict v-warn" id="aVerdict" style="display:none"></div>
+        <div class="callout" style="margin-top:14px;font-size:13px">
+          <b>怎麼用這個數字：</b>把「所需客戶數」拿去對照你的<b>可觸及市場</b>。
+          若所需數量超過目標產業總人數的 5%，這個模式在該產業不成立 —— 換產業，而不是換策略。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALC B -->
+  <div class="calc" id="calcB">
+    <div class="calchead">
+      <div class="ic" style="background:rgba(251,191,36,.14);color:var(--amber)">⚖</div>
+      <div>
+        <h3>試算器 B · 灰色模式期望值試算</h3>
+        <p>算出臨界被查機率 P* 與期望值 EV，並檢視對事故損失的敏感度</p>
+      </div>
+    </div>
+    <div class="calcbody">
+      <div>
+        <div class="field">
+          <label>載入報告中的灰色模型</label>
+          <select id="bPreset">
+            <option value="">— 自訂 —</option>
+            <option value="G1">G1 未授權內容聚合（255,000／18／500萬）</option>
+            <option value="G2a">G2a 博弈代收 3.5%（490,000／9／1,500萬）</option>
+            <option value="G2b">G2b 博弈代收 0.35%（49,000／12／1.47億）</option>
+            <option value="G3">G3 逃漏稅（250,000／30／1,500萬）</option>
+            <option value="G4">G4 仿冒電商（200,000／12／800萬）</option>
+            <option value="G5">G5 帳號共享轉售（120,000／24／300萬）</option>
+            <option value="G7">G7 未標示 AI／醫療建議（180,000／18／250萬）</option>
+            <option value="G8">G8 爬蟲／未同意資料（100,000／24／400萬）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>月營業貢獻 C <span class="hint">（NT$／月）</span></label>
+          <input type="number" id="bC" value="255000" min="0" step="1000">
+        </div>
+        <div class="field">
+          <label>預期存活月數 T <span class="hint">（未被查獲前可營運月數）</span></label>
+          <input type="number" id="bT" value="18" min="1" step="1">
+        </div>
+        <div class="field">
+          <label>單次事故損失 L <span class="hint">（NT$，罰金+沒入+刑罰+商譽）</span></label>
+          <input type="number" id="bL" value="5000000" min="1" step="100000">
+        </div>
+        <div class="field">
+          <label>被查獲機率 P <span class="hint" id="bPv">（%／年）</span></label>
+          <div class="rangewrap">
+            <input type="range" id="bP" min="0" max="100" step="0.5" value="30" oninput="calcB()">
+            <output id="bPo">30%</output>
+          </div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" onclick="calcB()">重新計算</button>
+          <button class="btn ghost" onclick="resetB()">重設</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="result">
+          <h4>期望值結果</h4>
+          <div style="margin-bottom:12px">
+            <div class="tiny">臨界被查機率 P*</div>
+            <div class="big" id="bPStar">—</div>
+            <div class="gauge"><i id="bGauge" style="width:0%"></i></div>
+            <div class="tiny" style="margin-top:6px">你的被查機率 <span id="bPNow" class="hl">30%</span> ／ 臨界值 <span id="bPLimit" class="hl">—</span></div>
+          </div>
+          <div class="rrow"><span class="k">總貢獻 T × C</span><span class="v" id="bTC">—</span></div>
+          <div class="rrow"><span class="k">期望值 EV</span><span class="v" id="bEV">—</span></div>
+          <div class="rrow"><span class="k">最壞情況下淨損</span><span class="v" id="bWorst" style="font-size:15px">—</span></div>
+        </div>
+        <div class="verdict" id="bVerdict" style="display:none"></div>
+
+        <div class="result" style="margin-top:14px">
+          <h4>敏感度：事故損失 L 的影響</h4>
+          <div class="tablewrap" style="margin:0;border:none;background:transparent">
+            <table style="min-width:auto">
+              <thead><tr><th>L 的情境</th><th class="num">事故損失</th><th class="num">P*</th><th class="num">EV</th></tr></thead>
+              <tbody id="bSens"></tbody>
+            </table>
+          </div>
+          <p class="tiny" style="margin-top:8px">P* 與 L 成反比 —— L 只要估錯一倍，P* 就會翻倍。這是灰色模式期望值不可控的直接證據。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPLIANCE ============ -->
+<section id="compliance">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 08</div>
+    <h2>法遵檢查清單</h2>
+    <p class="lead">以下為<b>自查用清單</b>，不構成法律意見。正式營業前請諮詢執業律師與會計師。點擊方塊可勾選。</p>
+  </div>
+
+  <h3>8.1 開站前（必須先完成）</h3>
+  <div class="grid g2" style="align-items:start">
+    <div class="card t" id="checklist1">
+      <div class="check"><input type="checkbox" id="c1"><label for="c1">公司登記（有限公司／商業登記）<span class="law">公司法</span></label></div>
+      <div class="check"><input type="checkbox" id="c2"><label for="c2">營業項目登記；確認是否觸及 <b>I301040 第三方支付服務業</b>（若代收金流）<span class="law">公司法、營業項目代碼</span></label></div>
+      <div class="check"><input type="checkbox" id="c3"><label for="c3">若代收金流：確認是否須依<b>洗錢防制法 6 條</b>能量登記（截至 2026/03 全臺僅 51 家核准）<span class="law">洗錢防制法</span></label></div>
+      <div class="check"><input type="checkbox" id="c4"><label for="c4">若提供 IASP：確認是否須依<b>電信業法</b>登記為電信事業（2025 修法）<span class="law">電信業法</span></label></div>
+      <div class="check"><input type="checkbox" id="c5"><label for="c5">確認業務是否涉及許可主義之行業（媒體出版、影音、商品零售、醫療、期貨）<span class="law">商業登記法</span></label></div>
+      <div class="check"><input type="checkbox" id="c6"><label for="c6">電子發票雲端上傳設定完成（<b>2025/07/01 起全面上路</b>）<span class="law">稅捐稽徵法</span></label></div>
+      <div class="check"><input type="checkbox" id="c7"><label for="c7">稅籍登記、營業稅與營業所得申報流程<span class="law">稅捐稽徵法</span></label></div>
+      <div class="check"><input type="checkbox" id="c8"><label for="c8">網站內容開發者政策、隱私權政策、服務條款（含退費機制）<span class="law">消保法</span></label></div>
+      <div class="check"><input type="checkbox" id="c9"><label for="c9">資安維護計畫、個資外洩通報流程（<b>2025/11/14 修正後有通報義務</b>）<span class="law">個資法</span></label></div>
+      <div class="check"><input type="checkbox" id="c10"><label for="c10">著作權授權合約：素材、字型、圖片、影片、資料集<span class="law">著作權法</span></label></div>
+      <div class="check"><input type="checkbox" id="c11"><label for="c11">AI 生成內容使用規範與揭露方式<span class="law">AI 基本法</span></label></div>
+      <div class="check"><input type="checkbox" id="c12"><label for="c12">第三方服務條款審查（支付、簡訊、Email、雲端、AI API）<span class="law">—</span></label></div>
+    </div>
+
+    <div>
+      <h3>8.2 營運中（每季檢查）</h3>
+      <div class="card t" id="checklist2">
+        <div class="check"><input type="checkbox" id="d13"><label for="d13">內容授權在有效期內；到期前完成續約或下架<span class="law">著作權法 44–65・每季</span></label></div>
+        <div class="check"><input type="checkbox" id="d14"><label for="d14">合理使用判斷留有書面記錄（來源、比例、理由）<span class="law">著作權法・每季</span></label></div>
+        <div class="check"><input type="checkbox" id="d15"><label for="d15">個人資料蒐集有告知與同意；資料更正／刪除機制可用<span class="law">個資法・每季</span></label></div>
+        <div class="check"><input type="checkbox" id="d16"><label for="d16">金流：交易監控與異常交易處理 SOP（大額、境外、頻繁退費）<span class="law">洗錢防制法・每月</span></label></div>
+        <div class="check"><input type="checkbox" id="d17"><label for="d17">帳號實名驗證與風控規則有效性檢討<span class="law">每月</span></label></div>
+        <div class="check"><input type="checkbox" id="d18"><label for="d18">退費與爭議處理統計；退款率異常追蹤<span class="law">消保法・每月</span></label></div>
+        <div class="check"><input type="checkbox" id="d19"><label for="d19">資安弱點修補、備份還原演練<span class="law">個資法・每季</span></label></div>
+        <div class="check"><input type="checkbox" id="d20"><label for="d20">稅務：營業額申報、發票開立、扣繳<span class="law">稅捐稽徵法・每月</span></label></div>
+        <div class="check"><input type="checkbox" id="d21"><label for="d21">合作夥伴／供應商之法遵盡調（尤其涉及代收、導流）<span class="law">每季</span></label></div>
+        <div class="check"><input type="checkbox" id="d22"><label for="d22">員工之保密與競業條款<span class="law">勞動法・每半年</span></label></div>
+        <div class="check"><input type="checkbox" id="d23"><label for="d23">涉醫療、財經、法律建議 → 專業覆核與免責聲明有效性<span class="law">每月</span></label></div>
+        <div class="check"><input type="checkbox" id="d24"><label for="d24">使用 AI：模型訓練資料來源合法性、生成物相似性檢查<span class="law">著作權法、TIPO 指引・每季</span></label></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>8.3 絕對紅線（出現即停，不討論）</h3>
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card tr"><p class="small"><b>1. 代收任何你不了解最終用途的資金</b><br><span class="muted">洗錢防制法 6 條 + 刑法 266 條</span></p></div>
+    <div class="card tr"><p class="small"><b>2. 無授權重製、系統性抓取或轉載他人內容</b><br><span class="muted">著作權法 91、91-1 條；第 92 條非告訴乃論</span></p></div>
+    <div class="card tr"><p class="small"><b>3. 在未取得同意下蒐集或販售個人資料</b><br><span class="muted">個資法</span></p></div>
+    <div class="card tr"><p class="small"><b>4. 涉及博弈、彩票、adult 或其他依法須許可的服務卻未取得許可</b><br><span class="muted">許可主義</span></p></div>
+    <div class="card tr"><p class="small"><b>5. 虛構身分、偽造認證、買流量刷數</b><br><span class="muted">刑法 + 平台條款 + 商業倫理</span></p></div>
+    <div class="card tr"><p class="small"><b>6. 規避稅務登記或開立不實發票</b><br><span class="muted">稅捐稽徵法</span></p></div>
+    <div class="card tr" style="grid-column:1/-1"><p class="small"><b>7. 未標示 AI 生成卻涉及醫療、財經、法律等需專業資格的建議</b><br><span class="muted">AI 基本法、醫師法、金管會法規</span></p></div>
+  </div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+<section id="roadmap">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 09</div>
+    <h2>90 天路線圖</h2>
+    <p class="lead">三個階段、兩道 Gate。設定「停損點」比設定「成長點」更重要。</p>
+  </div>
+
+  <div class="tl">
+    <div class="tlitem">
+      <div class="day">第 0–30 天</div>
+      <h4>定義與證實 —— 確認「有沒有人願意付錢」，而不是「平台長什麼樣」</h4>
+      <div class="tablewrap" style="margin-top:10px">
+        <table style="min-width:auto">
+          <thead><tr><th>項目</th><th>交付物</th></tr></thead>
+          <tbody>
+            <tr><td>選定 1 個產業 + 1 個付費痛點</td><td>一頁「痛點 × 對象 × 願付價格」陳述</td></tr>
+            <tr><td>訪談 15–20 位目標客戶</td><td>訪談紀錄、願付價格排序</td></tr>
+            <tr><td>最小可行交付（人工即可）</td><td>手工完成的「服務」，不寫程式</td></tr>
+            <tr><td>取得 1–2 筆付費</td><td>訂單、付款憑證、客戶簽收</td></tr>
+            <tr><td>公司登記、稅籍、發票設定</td><td>完成</td></tr>
+            <tr><td>平台使用第三方代收（不自行收款）</td><td>金流串接完成</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn" style="margin-top:10px"><b>Gate：沒有拿到第一筆錢之前，不寫任何平台程式碼。</b></div>
+    </div>
+
+    <div class="tlitem">
+      <div class="day">第 31–60 天</div>
+      <h4>交付與計價 —— 把服務變成可重複、可定價的產品</h4>
+      <div class="tablewrap" style="margin-top:10px">
+        <table style="min-width:auto">
+          <thead><tr><th>項目</th><th>交付物</th></tr></thead>
+          <tbody>
+            <tr><td>交付流程標準化</td><td>SOP 文件（可交給別人做）</td></tr>
+            <tr><td>收費結構定型</td><td>月費 + 一次性建置費；至少 3 個付費客戶</td></tr>
+            <tr><td>評估第 3–5 個客戶的續約意願</td><td>續約意向確認</td></tr>
+            <tr><td>決定收費方式</td><td>依客戶特性選擇（低價走虛擬帳號省 NT$1／筆）</td></tr>
+            <tr><td>合法合約、隱私權政策、發票流程</td><td>上線</td></tr>
+            <tr><td>內容授權合約</td><td>完成</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout danger" style="margin-top:10px"><b>Gate：續約率 &lt; 50% → 回到第 0–30 天重新定義痛點，不要往下走。</b></div>
+    </div>
+
+    <div class="tlitem">
+      <div class="day">第 61–90 天</div>
+      <h4>決定要不要做平台 —— 用數據決定下一步，而不是用感覺</h4>
+      <div class="tablewrap" style="margin-top:10px">
+        <table style="min-width:auto">
+          <thead><tr><th>情境</th><th>條件</th><th>決策</th></tr></thead>
+          <tbody>
+            <tr><td><b>1</b></td><td>已有 5+ 付費客戶、流程重複度 &gt; 70%、痛點明確</td><td class="hl-g">✅ 做 M3 或 M6：把重複流程產品化，寫第一版軟體</td></tr>
+            <tr><td><b>2</b></td><td>已有 5+ 付費客戶但需求高度異質</td><td class="hl-a">🔄 繼續 M7：收斂為單一垂直產業專家服務</td></tr>
+            <tr><td><b>3</b></td><td>已有 5+ 付費客戶且社群互動強</td><td class="hl-a">🔄 做 M1：建立付費專業社群</td></tr>
+            <tr><td><b>4</b></td><td>少於 3 個付費客戶</td><td class="hl-r">⚠️ 暫停：回到需求端訪談，不做產品</td></tr>
+            <tr><td><b>5</b></td><td>需求明確但客戶不願付費</td><td>🔄 改變付費對象：從 B2C 轉 B2B，或從「工具」轉「服務」</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout good" style="margin-top:10px">
+        <b>90 天結束時，你應該有的資產：</b>3–8 個付費客戶合約（可預測的現金流）｜一份產業痛點地圖｜一套標準化交付 SOP｜決定下一段（產品化 or 深化服務）的依據
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RISK ============ -->
+<section id="risk">
+  <div class="sechead">
+    <div class="eyebrow">Chapter 10</div>
+    <h2>風險登記簿與 KPI</h2>
+  </div>
+
+  <h3>9.1 風險登記簿（10 項）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>風險</th><th>可能性</th><th>影響</th><th>等級</th><th>緩解措施</th></tr></thead>
+      <tbody>
+        <tr><td>R1</td><td>AI 摘要（AIO）吃掉自然流量</td><td>高</td><td>高</td><td><span class="tag r">🔴</span></td><td>從第一天就把「可被 AI 摘要」與「不可被 AI 摘要」的收入分開設計；營收重心放會員制</td></tr>
+        <tr><td>R2</td><td>平台演算法改版（Google 核心更新）</td><td>高</td><td>高</td><td><span class="tag r">🔴</span></td><td>不把單一流量來源當作命脈；多管道獲客</td></tr>
+        <tr><td>R3</td><td>支付費率上升或通路中斷</td><td>中</td><td>中</td><td><span class="tag a">🟡</span></td><td>至少接 2 家代收；保留虛擬帳號／超商通道</td></tr>
+        <tr><td>R4</td><td>金流成為偵測目標（尤其涉境外）</td><td>中</td><td>高</td><td><span class="tag a">🟠</span></td><td>不碰代收業務；自身帳戶與客戶帳戶分離；做好可疑交易 SOP</td></tr>
+        <tr><td>R5</td><td>內容授權到期或爭議</td><td>中</td><td>中</td><td><span class="tag a">🟡</span></td><td>授權期限納入行事曆；建立下架流程</td></tr>
+        <tr><td>R6</td><td>個資外洩事件</td><td>低</td><td>高</td><td><span class="tag a">🟠</span></td><td>最小化蒐集、加密、定期演練、備妥通報流程</td></tr>
+        <tr><td>R7</td><td>關鍵人物依賴（單點故障）</td><td>中</td><td>高</td><td><span class="tag a">🟠</span></td><td>文件化、逐步授權、培養第二人</td></tr>
+        <tr><td>R8</td><td>冷啟動無進展（流量／會員卡在低位）</td><td>高</td><td>高</td><td><span class="tag r">🔴</span></td><td>設定 30/60/90 天 Gate，Gate 不過就改方向不投入更多</td></tr>
+        <tr><td>R9</td><td>通路夾（平台抽成、抽成費）</td><td>中</td><td>中</td><td><span class="tag a">🟡</span></td><td>控制平台依賴度，總抽成 &lt; 20–25%</td></tr>
+        <tr><td>R10</td><td>政策／法規變動</td><td>中</td><td>中</td><td><span class="tag a">🟡</span></td><td>每季追蹤主管機關公告；關鍵法規變動即重估模型</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.2 KPI 儀表板（10 項 + 健康基準線）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>KPI</th><th>定義</th><th>健康基準線（30 天 / 90 天）</th></tr></thead>
+      <tbody>
+        <tr><td>K1</td><td>付費客戶數</td><td>期末有效付費客戶</td><td>30 天：1–2；90 天：5–8</td></tr>
+        <tr><td>K2</td><td>月經常性收入（MRR）</td><td>每月可預期收入</td><td>90 天：NT$5–20 萬</td></tr>
+        <tr><td>K3</td><td>續約率</td><td>到期續約數 ÷ 到期數</td><td>月度 &gt; 70%；年費 &gt; 60%</td></tr>
+        <tr><td>K4</td><td>ARPU</td><td>MRR ÷ 付費客戶數</td><td>M1 ≥ NT$250；M3 ≥ NT$1,500</td></tr>
+        <tr><td>K5</td><td>毛利率</td><td>（收入 − 變動成本）÷ 收入</td><td>&gt; 70%（平台型）</td></tr>
+        <tr><td>K6</td><td>每次交付工時</td><td>每客戶每月投入工時</td><td>&lt; 12 小時（否則無法產品化）</td></tr>
+        <tr><td>K7</td><td>流量結構</td><td>直接流量 + 訂閱來源佔比</td><td>直接 + 訂閱 &gt; 50%</td></tr>
+        <tr><td>K8</td><td>內容成本佔收入比</td><td>內容與授權支出 ÷ 收入</td><td>&lt; 20%</td></tr>
+        <tr><td>K9</td><td>法遵事件數</td><td>申訴、下架、查核、違規通知</td><td><b>0</b></td></tr>
+        <tr><td>K10</td><td>現金流週期</td><td>收款到可運用天數</td><td>&lt; 45 天（撥款 T+10 者需預留）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.3 三個關鍵決策閘門（Kill Criteria）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Gate</th><th>時間</th><th>條件</th><th>動作</th></tr></thead>
+      <tbody>
+        <tr><td><b>Gate A</b></td><td>第 30 天</td><td>未取得任何付費意願（僅「有興趣」）</td><td class="hl-r">停止開發，重新訪談 ≥ 20 人</td></tr>
+        <tr><td><b>Gate B</b></td><td>第 60 天</td><td>付費客戶 &lt; 3 或續約意向 &lt; 50%</td><td class="hl-a">回到需求定義，換產業假設</td></tr>
+        <tr><td><b>Gate C</b></td><td>第 90 天</td><td>MRR &lt; NT$3 萬且無改善趨勢</td><td class="hl-a">轉為兼業／接案模式，或結束該案</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ APPENDIX ============ -->
+<section id="appendix">
+  <div class="sechead">
+    <div class="eyebrow">Appendix</div>
+    <h2>資料來源與方法論</h2>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>類別</th><th>來源</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>市場規模</td><td>Research and Markets, <i>Databook Q1 2026: Taiwan</i>（2026-02-10, GLOBE NEWSWIRE）</td><td>台灣廣告市場規模、類別拆分、CAGR</td></tr>
+        <tr><td>基礎數據</td><td>DataReportal, <i>Digital 2026: Taiwan</i></td><td>人口、都市化、手機持有率、行動搜尋佔比</td></tr>
+        <tr><td>AI 內容</td><td>NewsGuard AI 生成低可信新聞站追蹤（2023/05 → 2026/06）</td><td>AI 內容供給通膨</td></tr>
+        <tr><td>搜尋演算法</td><td>Google Search Central：HCU 更新（2024/03）、核心更新（2026-10-08）</td><td>內容農場降權機制</td></tr>
+        <tr><td>流量品質</td><td>Cloudflare 2026/06 流量報告</td><td>雲端殭屍流量佔比 57.5%</td></tr>
+        <tr><td>流量貶值</td><td>Pew Research Center、SparkToro、Semrush、Mediavine/Raptive、WSJ（2025/12）</td><td>AIO 影響、CTR 下降、RPM 下滑、封鎖 AI 爬蟲效果</td></tr>
+        <tr><td>AI 農場實測</td><td>AntiSlop 2026 實測</td><td>單站／多站單位經濟</td></tr>
+        <tr><td>創作者經濟</td><td>CreatorIQ、Goldman Sachs</td><td>創作者數量、收入分布、轉付費率</td></tr>
+        <tr><td>平台抽成</td><td>Substack、Patreon、OnlyFans 公開費率</td><td>抽成上限基準</td></tr>
+        <tr><td>金流費率</td><td>綠界 ECPay、藍新、PAYUNi、LINE Pay、Stripe、Shopify Payments、台灣 Pay 官方牌價（2026）</td><td>單位經濟計算基礎</td></tr>
+        <tr><td>法規</td><td>洗錢防制法、營業項目 I301040、電信業法（2025 修法）、著作權法（111 年修正）、刑法 266 條、個資法（2025/11/14 修正）、AI 基本法、TIPO 2025 指引、電子發票制度</td><td>法遵邊界</td></tr>
+        <tr><td>司法案例</td><td>台北檢察署「豪杰」案、高雄「台灣里」案、台中 YD Payment 案、台中 Buyme out 案、新北遊戲點數案、調查局 2026 偵辦</td><td>灰色模式真實定價</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>方法論與限制</h3>
+  <ol class="muted small" style="padding-left:22px;line-height:2">
+    <li><b>損益平衡與期望值皆為模型推估，非引用實績。</b>固定成本假設 NT$6 萬／月（含 1 人薪資或合理人力成本），支付費率依牌價，未計稅負與折舊。</li>
+    <li><b>存活月數 T 為情境假設</b>，非統計估計。不同模式對 T 的敏感度遠高於對 C 的敏感度。</li>
+    <li><b>事故損失 L 的估計誤差最大</b>（可達 ±100%），已於 4.1 節揭露並建議讀者以試算器 B 自行重算敏感度。P* 與 L 成反比。</li>
+    <li><b>市場規模數據存在矛盾：</b>StateGlobe 的台灣數位廣告詐欺率估計（8.4%）與 Research and Markets 的規模估算口徑不一致，本報告以 R&amp;M 為基準並已於第 2 章揭露。</li>
+    <li><b>稅務、會計與法律細節請以主管機關公告與專業意見為準。</b>本報告不構成法律意見、稅務意見或投資建議。</li>
+    <li><b>未考慮的特殊情況：</b>繼承、既有客戶轉單、產業併購、跨境稅務架構、股權結構安排。</li>
+    <li><b>本報告未涵蓋：</b>新型態態驗（web3）、加密貨幣原生商業模式的法規分析、演算法交易類平台。</li>
+  </ol>
+
+  <div class="callout good" style="margin-top:22px;font-size:16px;line-height:1.9">
+    <b>一句話總結</b><br><br>
+    <b>架設網路平台能不能賺錢，取決於三件事：有沒有一群人痛到願意付錢、你有沒有合法且難以被複製的資料或信任、以及你的收入模型在你被規模拖累前能不能撐出現金流。</b><br><br>
+    灰色地帶看似回報率高，但它的期望值隨規模遞減、壽命由別人決定、且失敗時歸零。<b>最理性的策略是：先把它變成合法的生意。</b>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>本報告由 <b style="color:var(--tx2)">ChatArt Assistant</b> 產製 · v1.0 · 2026-11-01</div>
+      <div>數據基準日：2026-11-01 ｜ 金額單位：新台幣（TWD），除非另註</div>
+    </div>
+    <div style="margin-top:8px">本報告不構成法律意見、稅務意見或投資建議。損益平衡與期望值計算皆為模型推估。</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- helpers ---------- */
+  function num(id){ var el=document.getElementById(id); var v=parseFloat(el.value); return isNaN(v)?0:v; }
+  function fmtNT(n){
+    n = Math.round(n);
+    var neg = n<0; n=Math.abs(n);
+    var s = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg?"−":"") + "NT$" + s;
+  }
+  function fmtPlain(n){ return Math.round(n).toLocaleString("en-US"); }
+  function fmtPct(n){ return (Math.round(n*1000)/10).toFixed(1) + "%"; }
+  function set(id, val){ document.getElementById(id).textContent = val; }
+
+  /* ---------- CALC A ---------- */
+  var A_PRESETS = {
+    M1:{mode:"unit", price:299,  fee:3.0, var:0,  fixed:60000, unit:"付費會員"},
+    M2:{mode:"unit", price:2900, fee:2.8, var:0,  fixed:60000, unit:"份／月"},
+    M3:{mode:"unit", price:1990, fee:2.8, var:0,  fixed:60000, unit:"B2B 客戶"},
+    M5:{mode:"take", aov:6000, take:10, fee2:2.8, var2:0, fixed:60000, unit:"筆成交／月"},
+    M7:{mode:"unit", price:20000, fee:0,   var:0, fixed:60000, unit:"專案客戶"},
+    M8:{mode:"rpm", rpm:150, rpmVar:0, fixed:60000, unit:"千次頁瀏覽／月"}
+  };
+
+  function syncModeFields(){
+    var m = document.getElementById("aMode").value;
+    document.getElementById("aFieldsUnit").style.display = (m==="unit")?"":"none";
+    document.getElementById("aFieldsTake").style.display = (m==="take")?"":"none";
+    document.getElementById("aFieldsRpm").style.display = (m==="rpm")?"":"none";
+  }
+
+  function calcA(){
+    syncModeFields();
+    var fixed = num("aFixed"), mode = document.getElementById("aMode").value;
+    var units, monthlyRevenue, unitName, unitContribution, unitLabel;
+
+    if(mode==="unit"){
+      var price=num("aPrice"), fee=num("aFee")/100, vc=num("aVar");
+      unitContribution = price*(1-fee) - vc;
+      unitLabel = "位付費會員／客戶／份";
+      unitName = "付費會員／客戶／單位";
+    } else if(mode==="take"){
+      var aov=num("aAov"), take=num("aTake")/100, fee2=num("aFee2")/100, vc2=num("aVar2");
+      unitContribution = aov*take - aov*fee2 - vc2;
+      unitLabel = "筆成交／月";
+      unitName = "成交筆數／月";
+    } else {
+      var rpm=num("aRpm"), rpmVar=num("aRpmVar");
+      unitContribution = rpm - rpmVar;
+      unitLabel = "千次頁瀏覽／月";
+      unitName = "千次頁瀏覽／月";
+    }
+
+    if(unitContribution<=0){
+      units = Infinity;
+      monthlyRevenue = 0;
+    } else {
+      units = Math.ceil(fixed/unitContribution);
+      monthlyRevenue = units*unitContribution;
+    }
+
+    set("aUnits", isFinite(units)? fmtPlain(units)+" "+unitLabel : "無法損益平衡");
+    set("aRev", fmtNT(monthlyRevenue));
+    set("aRevY", fmtNT(monthlyRevenue*12));
+    set("aUnitName", unitName);
+    set("aUnitC", isFinite(unitContribution)? fmtNT(unitContribution)+"／單位" : "—");
+
+    var v = document.getElementById("aVerdict");
+    v.style.display="";
+    if(!isFinite(units)){
+      v.className = "verdict v-bad";
+      v.innerHTML = "<b>此計價模式下無法損益平衡。</b><br>每單位的營業貢獻 ≤ 0 —— 代表這個價格結構本身不成立，必須提高單價、降低費率，或改用其他計價模式。";
+    } else if(units<=10){
+      v.className = "verdict v-good";
+      v.innerHTML = "<b>門檻很低（"+fmtPlain(units)+" "+unitLabel+"）。</b><br>這個規模在 30–60 天內可達成，是最務實的起點。務必確認你能在 60 天內觸及這 "+fmtPlain(units)+" 個客戶 —— <b>門檻低不等於容易達成</b>。";
+    } else if(units<=200){
+      v.className = "verdict v-warn";
+      v.innerHTML = "<b>門檻中等（"+fmtPlain(units)+" "+unitLabel+"）。</b><br>需要 3–6 個月的累積，且要持續維持續約。請確認目標產業總人數 × 4% 是否足以支撐這個數字。";
+    } else {
+      v.className = "verdict v-bad";
+      v.innerHTML = "<b>門檻偏高（"+fmtPlain(units)+" "+unitLabel+"）。</b><br>這已接近需要既有流量或既有客戶群的規模。若你目前是從零開始，<b>建議先用 M7（服務）取得客戶與現金流，再產品化</b>，而不是直接挑戰這個門檻。";
+    }
+  }
+
+  function applyPresetA(key){
+    var p = A_PRESETS[key]; if(!p) return;
+    document.getElementById("aMode").value = p.mode;
+    document.getElementById("aFixed").value = p.fixed;
+    if(p.mode==="unit"){
+      document.getElementById("aPrice").value = p.price;
+      document.getElementById("aFee").value = p.fee;
+      document.getElementById("aVar").value = p.var;
+    } else if(p.mode==="take"){
+      document.getElementById("aAov").value = p.aov;
+      document.getElementById("aTake").value = p.take;
+      document.getElementById("aFee2").value = p.fee2;
+      document.getElementById("aVar2").value = p.var2;
+    } else {
+      document.getElementById("aRpm").value = p.rpm;
+      document.getElementById("aRpmVar").value = p.rpmVar;
+    }
+    calcA();
+  }
+
+  function resetA(){
+    document.getElementById("aPreset").value = "";
+    document.getElementById("aMode").value = "unit";
+    document.getElementById("aPrice").value = 299;
+    document.getElementById("aFee").value = 3.0;
+    document.getElementById("aVar").value = 0;
+    document.getElementById("aFixed").value = 60000;
+    calcA();
+  }
+
+  /* ---------- CALC B ---------- */
+  var B_PRESETS = {
+    G1:{c:255000, t:18, l:5000000},
+    G2a:{c:490000, t:9,  l:15000000},
+    G2b:{c:49000,  t:12, l:147000000},
+    G3:{c:250000, t:30, l:15000000},
+    G4:{c:200000, t:12, l:8000000},
+    G5:{c:120000, t:24, l:3000000},
+    G7:{c:180000, t:18, l:2500000},
+    G8:{c:100000, t:24, l:4000000}
+  };
+
+  function calcB(){
+    var C=num("bC"), T=num("bT"), L=num("bL"), P=num("bP")/100;
+    var TC = T*C;
+    var pStar = (L>0)? TC/L : Infinity;
+    var EV = (1-P)*TC - P*L;
+    var worst = -L;
+
+    set("bPStar", isFinite(pStar)? fmtPct(pStar) : "—");
+    set("bPNow", fmtPct(P));
+    set("bPLimit", isFinite(pStar)? fmtPct(pStar) : "—");
+    set("bTC", fmtNT(TC));
+    set("bEV", fmtNT(EV));
+    set("bWorst", fmtNT(worst));
+
+    /* gauge: P as % of P* */
+    var g = document.getElementById("bGauge");
+    var ratio = isFinite(pStar)? (P*100)/pStar : 0;
+    if(!isFinite(pStar)){ g.style.width="100%"; g.style.background="#f87171"; }
+    else if(P<pStar){ g.style.width=Math.min(100,ratio)+"%"; g.style.background="linear-gradient(90deg,#34d399,#2dd4bf)"; }
+    else { g.style.width="100%"; g.style.background="linear-gradient(90deg,#fbbf24,#f87171)"; }
+
+    var v = document.getElementById("bVerdict");
+    v.style.display="";
+    if(!isFinite(pStar)){
+      v.className="verdict v-bad";
+      v.innerHTML="<b>參數無效：</b>事故損失 L 必須大於 0。";
+    } else if(pStar>1){
+      v.className="verdict v-bad";
+      v.innerHTML="<b>P* = "+fmtPct(pStar)+" &gt; 100% —— 數學上不可能有正期望值。</b><br>即使完全不被查，總貢獻也小於一次事故損失。這個模式在數學上就不成立。";
+    } else if(P<pStar){
+      v.className="verdict v-warn";
+      v.innerHTML="<b>期望值為正（EV = "+fmtNT(EV)+"），但這是一個高風險訊號而非好消息。</b><br>你的被查機率 "+fmtPct(P)+" 低於臨界值 "+fmtPct(pStar)+"，代表數學上可行。<b>但請注意：</b>L 只是估計值 —— 把它乘以 2，P* 就會減半。灰色模式的「可行」是估計出來的，不是算出來的。";
+    } else {
+      v.className="verdict v-bad";
+      v.innerHTML="<b>期望值為負（EV = "+fmtNT(EV)+"）。</b><br>被查機率 "+fmtPct(P)+" 高於臨界值 "+fmtPct(pStar)+" —— 這個模式在數學上不成立。<b>最壞情況下淨損 "+fmtNT(worst)+"。</b>";
+    }
+
+    /* sensitivity table */
+    var rows = [
+      {lbl:"L × 0.5（損失估輕了）", mult:0.5},
+      {lbl:"L × 1.0（基準情境）", mult:1},
+      {lbl:"L × 2.0（損失估重了）", mult:2}
+    ];
+    var html="";
+    rows.forEach(function(r){
+      var Lv = L*r.mult;
+      var ps = (Lv>0)? TC/Lv : Infinity;
+      var ev = (1-P)*TC - P*Lv;
+      var cls = isFinite(ps)? (P<ps?"hl-g":"hl-r") : "hl-r";
+      html += "<tr><td>"+r.lbl+"</td><td class='num'>"+fmtNT(Lv)+
+              "</td><td class='num "+cls+"'>"+(isFinite(ps)?fmtPct(ps):"—")+
+              "</td><td class='num "+(ev>=0?"hl-g":"hl-r")+"'>"+fmtNT(ev)+"</td></tr>";
+    });
+    document.getElementById("bSens").innerHTML = html;
+  }
+
+  function applyPresetB(key){
+    var p = B_PRESETS[key]; if(!p) return;
+    document.getElementById("bC").value = p.c;
+    document.getElementById("bT").value = p.t;
+    document.getElementById("bL").value = p.l;
+    calcB();
+  }
+
+  function resetB(){
+    document.getElementById("bPreset").value = "";
+    document.getElementById("bC").value = 255000;
+    document.getElementById("bT").value = 18;
+    document.getElementById("bL").value = 5000000;
+    document.getElementById("bP").value = 30;
+    document.getElementById("bPo").textContent = "30%";
+    calcB();
+  }
+
+  /* ---------- wiring ---------- */
+  window.calcA = calcA;
+  window.resetA = resetA;
+  window.calcB = calcB;
+  window.resetB = resetB;
+
+  document.getElementById("aPreset").addEventListener("change", function(){
+    if(this.value) applyPresetA(this.value);
+  });
+  document.getElementById("aMode").addEventListener("change", function(){ syncModeFields(); calcA(); });
+  document.getElementById("bPreset").addEventListener("change", function(){
+    if(this.value) applyPresetB(this.value);
+  });
+  document.getElementById("bP").addEventListener("input", function(){
+    document.getElementById("bPo").textContent = parseFloat(this.value).toFixed(1).replace(/\.0$/,"")+"%";
+    calcB();
+  });
+
+  /* checklist toggle */
+  document.querySelectorAll(".check input[type=checkbox]").forEach(function(cb){
+    cb.addEventListener("change", function(){ cb.closest(".check").classList.toggle("done", cb.checked); });
+  });
+
+  /* init */
+  calcA();
+  calcB();
+})();
+</script>
+</body>
+</html>
