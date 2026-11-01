@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Maps 風格網站實作可行性分析報告 v1.0</title>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#111a2e; --panel:#141f36; --panel2:#1a2740;
+  --line:#24324f;
+  --tx:#e6edf7; --tx2:#9fb0c9; --tx3:#6c7f9b;
+  --cyan:#22d3ee; --teal:#2dd4bf; --green:#34d399; --amber:#fbbf24;
+  --orange:#fb923c; --red:#f87171; --violet:#a78bfa;
+  --radius:14px; --maxw:1180px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  line-height:1.85; font-size:16px; -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(34,211,238,.10), transparent 60%),
+    radial-gradient(800px 500px at 90% 5%, rgba(167,139,250,.09), transparent 60%);
+}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+
+nav{position:sticky; top:0; z-index:50; background:rgba(11,18,32,.90);
+  backdrop-filter:blur(14px); border-bottom:1px solid var(--line);}
+.navin{max-width:var(--maxw);margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.3px;font-size:15px;white-space:nowrap}
+.brand span{color:var(--cyan)}
+.navlinks{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.navlinks a{color:var(--tx2);font-size:13px;padding:5px 11px;border-radius:20px;white-space:nowrap}
+.navlinks a:hover{background:rgba(34,211,238,.12);color:var(--cyan);text-decoration:none}
+
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+section{padding:54px 0 10px}
+.sechead{margin-bottom:26px}
+.eyebrow{color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;margin-bottom:8px}
+h1{font-size:clamp(28px,4.6vw,46px);line-height:1.25;font-weight:800;letter-spacing:-.5px}
+h2{font-size:clamp(21px,3vw,29px);font-weight:800;line-height:1.35;margin-bottom:10px}
+h3{font-size:17px;font-weight:700;color:var(--tx);margin:22px 0 8px}
+h4{font-size:15px;font-weight:700;margin:14px 0 6px;color:var(--tx)}
+p{margin-bottom:12px}
+p:last-child{margin-bottom:0}
+.lead{font-size:17px;color:var(--tx2)}
+.muted{color:var(--tx2)}
+.small{font-size:13.5px}
+.tiny{font-size:12.5px;color:var(--tx3)}
+
+.hero{padding:60px 0 34px}
+.hero .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.chip{background:rgba(34,211,238,.09);border:1px solid rgba(34,211,238,.28);
+  color:var(--cyan);font-size:12.5px;padding:4px 12px;border-radius:20px;font-weight:600}
+.chip.g{background:rgba(52,211,153,.09);border-color:rgba(52,211,153,.28);color:var(--green)}
+.chip.a{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.28);color:var(--amber)}
+.chip.v{background:rgba(167,139,250,.09);border-color:rgba(167,139,250,.28);color:var(--violet)}
+
+.callout{border-left:3px solid var(--cyan); background:rgba(34,211,238,.05);
+  padding:14px 18px;border-radius:0 10px 10px 0;margin:18px 0;color:var(--tx2);font-size:14.5px}
+.callout.warn{border-color:var(--amber);background:rgba(251,191,36,.055)}
+.callout.danger{border-color:var(--red);background:rgba(248,113,113,.055)}
+.callout.good{border-color:var(--green);background:rgba(52,211,153,.055)}
+.callout b,.callout strong{color:var(--tx)}
+
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden}
+.card.t{border-top:3px solid var(--cyan)}
+.card.tg{border-top:3px solid var(--green)}
+.card.ta{border-top:3px solid var(--amber)}
+.card.tr{border-top:3px solid var(--red)}
+.card.tv{border-top:3px solid var(--violet)}
+.card h3{margin-top:0}
+.kpi{font-size:30px;font-weight:800;line-height:1.2;letter-spacing:-.5px}
+.kpi-label{font-size:12.5px;color:var(--tx3);margin-top:5px}
+.statbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.statbox .num{font-size:26px;font-weight:800;color:var(--cyan);line-height:1.25}
+.statbox .num.g{color:var(--green)}.statbox .num.a{color:var(--amber)}.statbox .num.r{color:var(--red)}
+.statbox .lb{font-size:12.5px;color:var(--tx2);margin-top:4px}
+.statbox .src{font-size:11.5px;color:var(--tx3);margin-top:6px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);font-weight:700;font-size:13px;color:var(--tx);position:sticky;top:0;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(34,211,238,.04)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hl{color:var(--cyan);font-weight:700}
+.hl-g{color:var(--green);font-weight:700}
+.hl-a{color:var(--amber);font-weight:700}
+.hl-r{color:var(--red);font-weight:700}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.tag.g{background:rgba(52,211,153,.14);color:var(--green)}
+.tag.a{background:rgba(251,191,36,.14);color:var(--amber)}
+.tag.r{background:rgba(248,113,113,.14);color:var(--red)}
+.tag.c{background:rgba(34,211,238,.14);color:var(--cyan)}
+.tag.v{background:rgba(167,139,250,.14);color:var(--violet)}
+
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:0;overflow:hidden;display:flex;flex-direction:column}
+.mcard .mh{padding:16px 18px 13px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.mcard .mid{font-size:11.5px;font-weight:700;letter-spacing:1.4px;color:var(--tx3)}
+.mcard .mt{font-size:18px;font-weight:800;margin-top:3px}
+.mcard .mb{padding:16px 18px;flex:1}
+.mcard .mf{padding:13px 18px;border-top:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;background:rgba(255,255,255,.015)}
+.mcard.star{border-color:rgba(52,211,153,.4)}
+.mcard.avoid{border-color:rgba(248,113,113,.35)}
+
+.calc{background:linear-gradient(160deg,#16233c,#111a2e);border:1px solid var(--line);border-radius:18px;padding:0;overflow:hidden;margin:18px 0}
+.calchead{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.calchead .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.calchead h3{margin:0;font-size:18px}
+.calchead p{margin:2px 0 0;font-size:13px;color:var(--tx2)}
+.calcbody{padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--tx2);margin-bottom:6px;font-weight:600}
+.field input[type=number],.field select{
+  width:100%;background:#0d1526;border:1px solid var(--line);color:var(--tx);
+  padding:9px 12px;border-radius:9px;font-size:14px;font-family:inherit}
+.field input[type=number]:focus,.field select:focus{outline:none;border-color:var(--cyan)}
+.field input[type=range]{width:100%;accent-color:var(--cyan)}
+.rangewrap{display:flex;align-items:center;gap:12px}
+.rangewrap .rv{font-size:13px;color:var(--cyan);font-weight:700;min-width:58px;text-align:right;font-variant-numeric:tabular-nums}
+.calcout{background:#0d1526;border:1px solid var(--line);border-radius:12px;padding:18px}
+.outrow{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px dashed rgba(36,50,79,.85);font-size:13.5px}
+.outrow:last-child{border-bottom:none}
+.outrow .k{color:var(--tx2)}
+.outrow .v{font-weight:800;font-variant-numeric:tabular-nums}
+.outrow.total{border-top:2px solid var(--line);margin-top:8px;padding-top:12px;font-size:15px}
+.verdict{margin-top:14px;border-radius:11px;padding:14px 16px;font-size:14px;font-weight:600;line-height:1.7}
+.verdict.ok{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.32);color:var(--green)}
+.verdict.bad{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.32);color:var(--red)}
+.verdict.mid{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.32);color:var(--amber)}
+
+.bigcall{background:linear-gradient(140deg,rgba(248,113,113,.14),rgba(248,113,113,.04));
+  border:1px solid rgba(248,113,113,.34);border-radius:16px;padding:26px 28px;margin:22px 0}
+.bigcall .num{font-size:clamp(40px,7vw,66px);font-weight:800;color:var(--red);line-height:1.05;letter-spacing:-1.5px}
+.bigcall .lab{font-size:14px;color:var(--tx2);margin-top:6px}
+.bigcall .txt{font-size:14.5px;color:var(--tx2);margin-top:14px}
+
+.tree{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;
+  background:#0d1526;border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto;
+  line-height:1.9;white-space:pre;color:var(--tx2)}
+.tree .y{color:var(--green);font-weight:700}
+.tree .n{color:var(--red);font-weight:700}
+.tree .h{color:var(--cyan);font-weight:700}
+
+.steps{counter-reset:st}
+.step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:none}
+.step .no{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(34,211,238,.13);
+  color:var(--cyan);display:grid;place-items:center;font-weight:800;font-size:13px}
+.step .tx{flex:1}
+.step .tx b{display:block;margin-bottom:2px}
+
+.bar{height:9px;border-radius:20px;background:#0d1526;border:1px solid var(--line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:20px}
+.bar i.r{background:linear-gradient(90deg,#f87171,#fb923c)}
+.bar i.g{background:linear-gradient(90deg,#34d399,#22d3ee)}
+.bar i.a{background:linear-gradient(90deg,#fbbf24,#fb923c)}
+
+details{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:0;margin:10px 0;overflow:hidden}
+details summary{cursor:pointer;padding:13px 17px;font-weight:700;font-size:14.5px;color:var(--tx);list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:"▸ ";color:var(--cyan)}
+details[open] summary:before{content:"▾ "}
+details .dbody{padding:0 17px 15px;font-size:14px;color:var(--tx2)}
+
+footer{margin-top:60px;border-top:1px solid var(--line);padding:30px 0 50px;color:var(--tx3);font-size:13px}
+footer a{color:var(--tx2)}
+
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .calcbody{grid-template-columns:1fr}
+  .navlinks{display:none}
+}
+@media(max-width:520px){
+  body{font-size:15px}
+  .wrap{padding:0 14px}
+  .card{padding:16px}
+  .bigcall{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="navin">
+  <div class="brand">🗺️ <span>Maps × Reviews</span> 可行性報告</div>
+  <div class="navlinks">
+    <a href="#summary">結論</a><a href="#tech">技術</a><a href="#tos">條款</a>
+    <a href="#data">5則上限</a><a href="#cost">成本試算</a><a href="#alt">免費替代</a><a href="#biz">商業模式</a>
+    <a href="#grey">灰色地帶</a><a href="#road">路線圖</a><a href="#risk">風險</a>
+    <a href="#appendix">附錄</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+
+<section class="hero" id="top">
+  <div class="eyebrow">實作可行性分析報告 · v1.0</div>
+  <h1>Google Maps 風格網站<br>地圖 + Google 評論，到底做不做？</h1>
+  <p class="lead">你問的兩件事 —— <b>地圖可以撈</b>、<b>Google 評論可以秀</b> —— 技術上都做得到。
+  真正的問題不是能不能做，而是<b>做完之後能不能賺錢、會不會被 Google 關掉</b>。
+  這份報告把條款紅線、評論 5 則上限的真實影響、API 成本結構與灰色地帶期望值全部量化。</p>
+  <div class="meta">
+    <span class="chip">📅 2026-11-01</span>
+    <span class="chip">🇹🇼 台灣法域</span>
+    <span class="chip v">🔗 延伸自《網路平台獲利模式分析報告》</span>
+    <span class="chip a">💵 匯率 USD/TWD = 31.4</span>
+  </div>
+</section>
+
+<section id="summary">
+  <div class="sechead">
+    <div class="eyebrow">Executive Summary</div>
+    <h2>一句話結論</h2>
+  </div>
+
+  <div class="bigcall">
+    <div class="num">做得出來，但賺不到錢</div>
+    <div class="lab">技術可行性 ≈ 90%　|　商業可行性（做成公開目錄）≈ 極低　|　推薦路徑：服務單一商家</div>
+    <div class="txt">
+      <b>秀評論這件事會把你的網站流量天花板壓到 <span class="hl-r">9,181 PV／月</span>。</b>
+      超過這個數，每多一個訪客就多虧一筆錢 —— 因為 Google 條款禁止快取，成本無法攤平。
+      把評論拿掉，同一個網站的天花板立刻跳到 <span class="hl-g">12 萬 – 44 萬 PV</span>。
+    </div>
+  </div>
+
+  <div class="grid g4">
+    <div class="card t">
+      <h3>① 地圖可以撈嗎？</h3>
+      <p><span class="tag g">✅ 可以</span></p>
+      <p class="small muted">Maps Embed API <b>免費無上限</b>；Maps JavaScript API $7／1,000（免費額 1 萬）。
+      但「撈」只能是<b>單次即時呼叫</b>，不能變成你的資料庫。</p>
+      <p class="small" style="color:var(--red)">批次抓全台商家存檔 → 違反條款 3.2.3(a)(b)</p>
+    </div>
+    <div class="card ta">
+      <h3>② 評論可以秀嗎？</h3>
+      <p><span class="tag a">⚠️ 可以，但有硬上限</span></p>
+      <p class="small muted">Place Details Ent+Atmosphere $25／1,000。每家<b>最多 5 則</b>，
+      依相關性排序，<b>無分頁、無 token、付更多錢也解鎖不了</b>。</p>
+      <p class="small" style="color:var(--amber)">另有一整包強制呈現義務（姓名、照片、歸屬、回報…）</p>
+    </div>
+    <div class="card tr">
+      <h3>③ 這樣能賺錢嗎？</h3>
+      <p><span class="tag r">❌ 做成公開目錄：不行</span></p>
+      <p class="small muted">條款 3.2.3(d) <b>明文禁止</b>用 Maps Core Services 建立
+      「listings or directory service」。這不是灰色地帶，是紅線。</p>
+      <p class="small hl-g">✅ 服務單一商家（BP API）：API 成本 NT$0</p>
+    </div>
+    <div class="card t">
+      <h3>④ 換免費方案有救嗎？</h3>
+      <p><span class="tag c">⚠️ 地圖有救，評論無解</span></p>
+      <p class="small muted">MapLibre + OpenFreeMap 地圖端 <b class="hl-g">$0</b>；OSM（ODbL）可<b>合法自建目錄</b>，
+      繞開 3.2.3(d)。但評論無替代。</p>
+      <p class="small hl-g">✅ Yelp Enhanced + 24h 快取 → 天花板 145,110 PV</p>
+    </div>
+  </div>
+
+  <h3>六個核心結論</h3>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag c">01</span>
+      <h4>技術可行性 ≈ 90%，1–2 天可做出原型</h4>
+      <p class="small muted">Google 官方範例本身就能跑。阻擋你的從來不是工程能力。</p>
+    </div>
+    <div class="card">
+      <span class="tag c">02</span>
+      <h4>真正的一刀切在條款 3.2.3(d)</h4>
+      <p class="small muted">「商家列表或目錄服務」被直接點名禁止。安全港只有一個：
+      <b>substantial, independent value</b>（實質且獨立的價值）。</p>
+    </div>
+    <div class="card">
+      <span class="tag c">03</span>
+      <h4>5 則上限是模型的致命傷</h4>
+      <p class="small muted">只保留 <b>3.6%</b> 語料、<b>87.9%</b> 商家被截斷、<b>32.4%</b> 評論沒有文字、
+      時間覆蓋率只有 <b>3.1%</b>。但整體平均星等只差 0.056 —— <b>偏誤藏在個體裡</b>。</p>
+    </div>
+    <div class="card">
+      <span class="tag c">04</span>
+      <h4>經濟結構是「越紅越虧」</h4>
+      <p class="small muted">一次評論牆檢視成本 NT$0.785，是單次廣告收益 NT$0.150 的
+      <b class="hl-r">5.23 倍</b>。而且有明確天花板。</p>
+    </div>
+    <div class="card">
+      <span class="tag c">05</span>
+      <h4>灰色地帶期望值全負，且隨規模遞減</h4>
+      <p class="small muted">4 個灰色模型臨界機率 P* 落在 <b>6.00% – 10.00%</b>，
+      實際被查機率 <b>25% – 55%</b>。規模 1 倍 → 10 倍，EV/(T×C) 從 −4.10 惡化到 −9.20。</p>
+    </div>
+    <div class="card">
+      <span class="tag c">06</span>
+      <h4>免費替代方案能解地圖，解不了評論</h4>
+      <p class="small muted">MapLibre + OpenFreeMap 讓地圖端 <b class="hl-g">$0</b>，OSM 讓你<b>合法自建目錄</b>；
+      但評論只能靠 Yelp Enhanced（$299/月、3 則 ×160 字元）。
+      <b>關鍵是快取權不是價格</b>：Yelp 24h 快取讓成本 ∝ 商家數，天花板從 <b class="hl-r">9,181</b> 解到
+      <b class="hl-g">145,110 PV</b>（高 15.8 倍）。</p>
+    </div>
+  </div>
+
+  <h3>推薦路線</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>優先序</th><th>路線</th><th>技術難度</th><th>合規風險</th><th>可獲利性</th><th>建議</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><b>單一商家自我評論展示</b>（Business Profile API）</td><td>低</td><td><span class="tag g">最低</span></td><td><span class="tag g">高</span></td><td>✅ <b>立即可做</b></td></tr>
+      <tr><td class="num">2</td><td><b>商家評論監控 + AI 回覆後台</b></td><td>中</td><td><span class="tag g">低</span></td><td><span class="tag g">高</span></td><td>✅ 值得做</td></tr>
+      <tr><td class="num">3</td><td>地圖 + 評論當介面，價值在後端（預約／報價／排隊）</td><td>中高</td><td><span class="tag a">中</span></td><td><span class="tag g">最高</span></td><td>✅ 長期最佳</td></tr>
+      <tr><td class="num">4</td><td>第三方評論掛件代裝（review widget）</td><td>極低</td><td><span class="tag g">最低</span></td><td><span class="tag a">中</span></td><td>🟡 低風險現金流</td></tr>
+      <tr><td class="num">5</td><td>垂直產業聲譽分析（合法授權資料商）</td><td>高</td><td><span class="tag g">低</span></td><td><span class="tag g">高</span></td><td>🟡 有門檻</td></tr>
+      <tr><td class="num">5b</td><td><b>OSM 自建目錄 + MapLibre 免費地圖</b>（第 6 章）</td><td>中</td><td><span class="tag g">低</span></td><td><span class="tag g">高</span></td><td>✅ <b>可立即啟動的底座</b></td></tr>
+      <tr><td class="num">6</td><td><b>公開找店目錄 / 評論平台</b></td><td>低</td><td><span class="tag r">最高</span></td><td><span class="tag r">負</span></td><td>❌ <b>不要做</b></td></tr>
+      <tr><td class="num">7</td><td>爬蟲建庫 / 洗評 / 混淆式介面</td><td>中</td><td><span class="tag r">極高</span></td><td><span class="tag r">負</span></td><td>❌ <b>不要做</b></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="tech">
+  <div class="sechead">
+    <div class="eyebrow">需求拆解</div>
+    <h2>「撈」的三個層級，合法性完全不同</h2>
+    <p class="lead">「有地圖可以撈」這句話裡，其實混了三件差異很大的事。</p>
+  </div>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>層級</th><th>做法</th><th>技術可行</th><th>條款判定</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td><b>L1 顯示</b></td><td>嵌入 Google 地圖 iframe 或用 Maps JS API</td><td>✅</td><td><span class="tag g">合規</span></td><td>Maps Embed API <b>免費無上限</b>；Maps JS API 有免費額度</td></tr>
+      <tr><td><b>L2 查詢</b></td><td>用 Places API 搜附近商家、取名稱地址星等</td><td>✅</td><td><span class="tag a">有條件合規</span></td><td>必須即時呼叫、標 Google 歸屬、不得改寫</td></tr>
+      <tr><td><b>L3 蒐集</b></td><td><b>批次抓全台商家、存成自己的資料庫</b></td><td>✅ 技術上做得到</td><td><span class="tag r">明文禁止</span></td><td>No Caching + No Scraping（3.2.3a、3.2.3b）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>L3 為什麼不行 —— 三道具體限制</h3>
+  <div class="grid g3">
+    <div class="card tr">
+      <h4>No Scraping（3.2.3a）</h4>
+      <p class="small">不得預先抓取、索引、儲存、轉發或重新託管 Maps Content。
+      明文包含<b>複製儲存使用者評論</b>。</p>
+      <p class="small" style="color:var(--red)">預先跑一輪把資料灌進自己的庫 —— 正中此條。</p>
+    </div>
+    <div class="card tr">
+      <h4>No Caching（3.2.3b）</h4>
+      <p class="small">不得快取。Places API 唯一豁免是 <b>place_id 可永久儲存</b>；
+      經緯度僅可暫存 30 天；<b>評論不在豁免清單</b>。</p>
+      <p class="small" style="color:var(--red)">→ 成本無法攤平、沒有資料庫、沒有 SEO 資產、沒有護城河。</p>
+    </div>
+    <div class="card tr">
+      <h4>搜尋本身也沒有「全部」</h4>
+      <p class="small">Text Search：每頁 20 筆、單次最多 60 筆。Nearby Search：每次最多 20 筆。</p>
+      <p class="small" style="color:var(--red)"><b>Nearby Search 沒有「只要 ID」的 SKU</b> —— 即使只想拿 place_id 過水，一樣按 $32／1,000 計費。</p>
+    </div>
+  </div>
+
+  <h3>四種地圖技術路線比較</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>路線</th><th>成本</th><th>互動</th><th>可自訂樣式</th><th>評論來源</th><th>適用</th></tr></thead>
+    <tbody>
+      <tr><td><b>Maps Embed API</b></td><td><span class="hl-g">免費無上限</span></td><td>僅內建縮放</td><td>無</td><td>Places API</td><td>單商家頁、文章內嵌</td></tr>
+      <tr><td>Maps JavaScript API</td><td>$7／1,000</td><td>完整</td><td>無</td><td>Places API</td><td>互動站</td></tr>
+      <tr><td>Mapbox GL JS</td><td>$5／1,000</td><td>完整</td><td><span class="hl-g">可自訂</span></td><td>Places API</td><td>要視覺風格的品牌站</td></tr>
+      <tr><td>Leaflet + OSM</td><td>免費（須遵守 tile 政策）</td><td>完整</td><td>可自訂</td><td>需另覓合法來源</td><td>只在評論來源合法時成立</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>「Google 評論可以秀」的三個硬條件</h3>
+
+  <details open>
+    <summary>條件一：只有 5 則，而且付更多錢也解鎖不了</summary>
+    <div class="dbody">
+      <p>Places API (New) 的 Place Details 回傳評論時，<b>最多 5 則</b>，依相關性排序。
+      <b>沒有分頁參數、沒有 pageToken、沒有排序選項。</b>Legacy Place Details 雖提供
+      <code>most_relevant</code> / <code>newest</code> 排序選項，但回傳筆數上限同樣是 5 則。
+      Google 官方文件明載：<b>沒有任何付費方案可以解鎖更高的上限</b>。</p>
+      <div class="callout warn">
+        <b>實作陷阱</b>：若你要「最新優先」，做法是取回那 5 則（相關性排序）後<b>在本地用 publishTime 排序</b>。
+        但那得到的是「<b>5 則的最新排列</b>」，<b>不是「最新的 5 則」</b>。這個差別在下一章會變成一個真實的商業問題。
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary>條件二：要買對 SKU（你的費用取決於你問了什麼）</summary>
+    <div class="dbody">
+      <p>含評論需要 <b>Place Details Enterprise + Atmosphere</b>（$25／1,000，超過 1,000 次免費額度後）。
+      如果 field mask 只要 rating 或 reviews 以外的欄位，會被歸到不同計價級距。</p>
+      <p>Places API 的費用取決於 <b>field mask（你要求了哪些欄位）</b>，不是取決於你「用在哪裡」。
+      多要一個 <code>photos</code> 欄位，可能就跳到不同的 SKU 級距。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>條件三：八項強制呈現義務，漏一項就違規</summary>
+    <div class="dbody">
+      <div class="tablewrap"><table style="min-width:520px">
+        <thead><tr><th>義務</th><th>具體要求</th></tr></thead>
+        <tbody>
+          <tr><td>顯示作者資訊</td><td>姓名 + 照片 + 個人檔案連結（空間有限時照片至少要顯示）</td></tr>
+          <tr><td>導向原始來源</td><td>提供 <code>googleMapsUri</code> 直達 Google Maps 原始評論</td></tr>
+          <tr><td>歸屬</td><td>顯示 Google logo 或「Google Maps」字樣，且<b>不得修改外觀</b></td></tr>
+          <tr><td>說明排序</td><td>必須說明評論的排序／篩選方式（預設為相關性）</td></tr>
+          <tr><td>回報機制</td><td>提供 <code>flagContentUri</code> 回報連結</td></tr>
+          <tr><td>時間標示</td><td>建議顯示 <code>relativePublishTimeDescription</code></td></tr>
+          <tr><td>翻譯揭露</td><td>若做了翻譯，必須告知並提供 <code>originalText</code> 原文</td></tr>
+          <tr><td>驗證說明</td><td>說明 Google 如何驗證評論</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small hl-g" style="margin-top:12px">✅ 可以合法加值：<b>AI 摘要 <code>reviewSummary</code></b> ——
+      但必須逐字顯示 disclosureText、標題固定用「Review summary」、附上 Google 說明連結與回報連結。</p>
+    </div>
+  </details>
+
+  <div class="callout danger">
+    <b>一個容易被忽略的技術限制</b>：Places API (New) <b>不回傳商家回覆（owner response），也不回傳評論照片</b>。
+    第三方「評論牆」產品的常見功能，API 層級其實給不了。
+  </div>
+</section>
+
+<section id="tos">
+  <div class="sechead">
+    <div class="eyebrow">Google Maps Platform 條款 3.2.3</div>
+    <h2>三道紅線（其中一道直接命中）</h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="card t">
+      <span class="tag c">3.2.3 (a)</span>
+      <h4>No Scraping —— 禁止抓取</h4>
+      <p class="small">不得預先抓取、索引、儲存、轉發或重新託管 Maps Content。
+      明文包含複製儲存商家名稱、地址、<b>使用者評論</b>。</p>
+      <div class="callout danger" style="margin:12px 0 0">
+        <b>命中</b>：任何「先跑一次程式把全台商家與評論抓回來存進 MySQL / Airtable / BigQuery」的設計。
+      </div>
+    </div>
+    <div class="card t">
+      <span class="tag c">3.2.3 (b)</span>
+      <h4>No Caching —— 禁止快取</h4>
+      <p class="small">不得快取 Google Maps Content。Places API 的唯一豁免是
+      <b>place_id 可永久儲存</b>；經緯度可暫存 30 天；<b>評論不在豁免範圍</b>。</p>
+      <div class="callout danger" style="margin:12px 0 0">
+        <b>這一條直接決定了本生意 的經濟結構</b>：成本 = 流量 × 單位成本，嚴格線性，無法攤薄。
+      </div>
+    </div>
+    <div class="card t">
+      <span class="tag c">3.2.3 (c)</span>
+      <h4>No Creating Content From Maps Content</h4>
+      <p class="small">不得用 Places API 的經緯度做 point-in-polygon 分析。
+      EEA 版本另禁止用 Maps Content 訓練或測試 AI 模型。</p>
+      <div class="callout warn" style="margin:12px 0 0">
+        <b>命中</b>：想做「找出某服務範圍內的所有店」這種分析，用 Places API 資料做就是違規。
+      </div>
+    </div>
+    <div class="card tr">
+      <span class="tag r">3.2.3 (d) ⭐ 最致命</span>
+      <h4>No Re-Creating Google Products / No Directory Service</h4>
+      <p class="small">不得使用 Services 建立與 Google 產品功能實質相似的產品。
+      <b>明文禁止使用 Maps Core Services 建立 listings or directory service（商家列表或目錄服務）</b>，
+      也禁止用它建立或擴充廣告產品。產品必須有 <b>substantial, independent value</b>。</p>
+      <div class="callout danger" style="margin:12px 0 0">
+        <b>直接命中</b>：你想做的「找店平台」，在條款裡的正式名稱就叫「目錄服務」。
+        這不是灰色地帶，是紅線。
+      </div>
+    </div>
+  </div>
+
+  <h3>唯一安全港：substantial, independent value 測試</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>檢驗面向</th><th>✅ 會通過</th><th>❌ 不會通過</th></tr></thead>
+    <tbody>
+      <tr><td>資料層</td><td>地圖與評論只是<b>佐證引用</b>，核心價值在你的後端</td><td>網站主體就是「地圖 + 評論列表」</td></tr>
+      <tr><td>流量來源</td><td>你的<b>原創內容</b>（評測、教學、排行分析）帶來流量</td><td>靠 Google 的資料內容本身吸引流量</td></tr>
+      <tr><td>資料所有</td><td>核心資料是你自己產生或合法授權的</td><td>核心資料就是 Google 的商家與評論</td></tr>
+      <tr><td>呈現方式</td><td>即時請求、標 Google 歸屬、不改寫</td><td>快取成自己的庫、自建「評論資料庫」</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">
+    <b>EEA 專屬限制（2025-07-08 生效）</b>：Places API 內容不得再與任何地圖（包括 Google Map）並列顯示，
+    須改用 Places UI Kit。<b>台灣不在 EEA，此條不適用</b>；但若你的 Google Cloud
+    <b>billing address 在 EEA</b>，則該限制會適用到你的專案。
+  </div>
+</section>
+
+<section id="data">
+  <div class="sechead">
+    <div class="eyebrow">資料實證</div>
+    <h2>5 則上限到底傷到什麼程度</h2>
+    <p class="lead">數據來自 <b>justreview.co 的公開評論語料分析（2026-08-21，384,482 則評論 ／ 2,907 個商家）</b>，
+    是檢驗「5 則上限」真實影響最直接的方式。</p>
+  </div>
+
+  <div class="grid g4">
+    <div class="statbox">
+      <div class="num r">3.6%</div>
+      <div class="lb">截成 5 則後保留的語料比例</div>
+      <div class="src">384,482 則 → 約 13,841 則</div>
+    </div>
+    <div class="statbox">
+      <div class="num a">87.9%</div>
+      <div class="lb">評論數超過 5 則、會被截斷的商家</div>
+      <div class="src">約 2,555 家 ／ 2,907 家</div>
+    </div>
+    <div class="statbox">
+      <div class="num r">3.1%</div>
+      <div class="lb">時間覆蓋率（5 則 ≈ 7.6 週 vs 完整 4.6 年）</div>
+      <div class="src">中位 53 天 vs 1,693 天</div>
+    </div>
+    <div class="statbox">
+      <div class="num a">32.4%</div>
+      <div class="lb">只有星等、沒有文字的評論</div>
+      <div class="src">約 124,572 則，無法引用</div>
+    </div>
+  </div>
+
+  <h3>覆蓋率：只留下 3.6%</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>指標</th><th>數值</th></tr></thead>
+    <tbody>
+      <tr><td>語料總量</td><td>384,482 則評論 ／ 2,907 個商家</td></tr>
+      <tr><td>每商家評論數</td><td>中位 <b class="hl-a">37</b>、p90 <b class="hl-a">220</b>、最高 <b class="hl-a">29,145</b></td></tr>
+      <tr><td>截成 5 則後保留</td><td>約 13,841 則 ＝ <b class="hl-r">3.6%</b></td></tr>
+      <tr><td>評論數超過 5 則（會被截斷）的商家</td><td><b class="hl-r">87.9%</b>（約 2,555 家）</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">中位數 37 則代表一個典型商家有 <b>7.4 倍</b>的內容你看不到。</p>
+
+  <h3>失真程度：整體平均看不出來，個體嚴重偏誤</h3>
+  <div class="grid g2">
+    <div class="card ta">
+      <h4>整體層級：差異很小，容易騙過自己</h4>
+      <div class="tablewrap" style="margin:10px 0"><table style="min-width:400px">
+        <thead><tr><th></th><th class="num">5 則平均</th><th class="num">完整歷史</th></tr></thead>
+        <tbody>
+          <tr><td>全體平均星等</td><td class="num">4.726</td><td class="num">4.782</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small">整體只差 <b>0.056 星</b> —— 看起來無傷大雅。</p>
+    </div>
+    <div class="card tr">
+      <h4>個體層級：每六家就有一家嚴重失真</h4>
+      <div class="tablewrap" style="margin:10px 0"><table style="min-width:400px">
+        <thead><tr><th>指標</th><th class="num">數值</th></tr></thead>
+        <tbody>
+          <tr><td>每商家平均絕對差</td><td class="num hl-a">0.256 星</td></tr>
+          <tr><td>差 ≥ 0.5 星（1,896 家中）</td><td class="num hl-r">296 家（15.6%）</td></tr>
+          <tr><td>讀起來<b>偏高</b>的商家</td><td class="num hl-r">1,027 家</td></tr>
+          <tr><td>讀起來<b>偏低</b>的商家</td><td class="num hl-g">455 家</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="callout danger">
+    <b>關鍵洞察：偏誤方向不對稱且不可預測。</b>
+    1,027 家偏高 vs 455 家偏低 —— 多數商家的小幅偏高，被少數商家的大幅偏低拉低，掩蓋了整體平均的差異。
+    <br><br>
+    <b>對消費者：這個網站不能讓人用評論數判斷一家店好不好，而且它系統性地偏樂觀。</b>
+  </div>
+
+  <h3>單一評論的破壞力</h3>
+  <p class="small muted">在 5 則的顯示視窗裡，一則新來的 1 星評論會擠掉原本的第 5 則：</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>被擠掉的原評論</th><th class="num">5 則平均的變化</th></tr></thead>
+    <tbody>
+      <tr><td>原本 5 星</td><td class="num hl-r">4.8 → 4.0（<b>−0.8 星</b>）</td></tr>
+      <tr><td>原本 4 星</td><td class="num hl-r">4.6 → 4.0（<b>−0.6 星</b>）</td></tr>
+      <tr><td>原本 1 星</td><td class="num">不變</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <b>任意一位顧客的一次不愉快，就能讓這家店在你的頁面上看起來掉 0.6–0.8 星。</b>
+    對商家是真實風險；對消費者，你給的星等其實是<b>滾動視窗裡的雜訊</b>。
+  </div>
+
+  <h3>商用風險：顯示不全可能構成不實表示</h3>
+  <div class="callout danger">
+    如果你在自己的網站顯示 5 則評論，讓消費者以為「這是這家店的全部評價」，
+    而實際上該店有 37 則評論（且其中 1,027 家的完整平均比顯示值高），
+    這個呈現方式本身就有被主張為<b>廣告不實 ／ 誤導消費者</b>的空間（消保法、公平交易法）。
+  </div>
+  <div class="card tg">
+    <h4>緩解做法</h4>
+    <ul class="small" style="margin:6px 0 0 18px;color:var(--tx2)">
+      <li>明確標註「以下顯示 Google 上<b>最相關的 5 則</b>評論，完整評論請見 Google Maps」</li>
+      <li>顯示評論總數與整體星等（需 Places API 的 <code>rating</code> / <code>userRatingCount</code> 欄位，要另計 SKU）</li>
+      <li>永遠提供 <code>googleMapsUri</code> 直達原始頁面</li>
+      <li><b>絕對不要</b>自己動手把 5 則排版成「最新評論」或「所有評論」</li>
+    </ul>
+  </div>
+</section>
+
+<section id="cost">
+  <div class="sechead">
+    <div class="eyebrow">成本結構與單位經濟</div>
+    <h2>流量試算器</h2>
+    <p class="lead">左側調整參數，右側即時算成本、損益與<b>流量天花板</b>。
+    計價採用 Google 官方定價頁的<b>分級累進模型</b>（每個用量區間單獨計費後加總）。</p>
+  </div>
+
+  <div class="calc">
+    <div class="calchead">
+      <div class="ic" style="background:rgba(34,211,238,.12);color:var(--cyan)">💰</div>
+      <div>
+        <h3>月流量 → API 成本 → 損益</h3>
+        <p>預設：地圖 50% 載入、評論 30% 載入、搜尋 10%、廣告 CPM NT$150</p>
+      </div>
+    </div>
+    <div class="calcbody">
+      <div>
+        <div class="field">
+          <label>月頁瀏覽量（PV）</label>
+          <input type="number" id="pv" value="50000" min="0" step="1000">
+        </div>
+        <div class="field">
+          <label>地圖方案</label>
+          <select id="mapSku">
+            <option value="map_embed">Maps Embed API（免費無上限）</option>
+            <option value="map_dynamic" selected>Maps JavaScript API（$7／1,000）</option>
+            <option value="mapbox">Mapbox GL JS（$5／1,000）</option>
+            <option value="map_static">Maps Static API（$2／1,000）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>地圖載入率</label>
+          <div class="rangewrap"><input type="range" id="mapRate" value="50" min="0" max="100"><span class="rv" id="mapRateV">50%</span></div>
+        </div>
+        <div class="field">
+          <label>評論載入率</label>
+          <div class="rangewrap"><input type="range" id="revRate" value="30" min="0" max="100"><span class="rv" id="revRateV">30%</span></div>
+        </div>
+        <div class="field">
+          <label>搜尋請求率（Text Search）</label>
+          <div class="rangewrap"><input type="range" id="seaRate" value="10" min="0" max="50"><span class="rv" id="seaRateV">10%</span></div>
+        </div>
+        <div class="field">
+          <label>評論 SKU</label>
+          <select id="revSku">
+            <option value="details_eaa" selected>Place Details Ent+Atmosphere（含評論，$25／1,000）</option>
+            <option value="details_ess">Place Details Essentials（不含評論，$5／1,000）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>廣告淨 CPM（NT$／千次瀏覽）</label>
+          <input type="number" id="cpm" value="150" min="0" step="10">
+        </div>
+        <div class="grid g2">
+          <div class="field">
+            <label>付費訂閱人數</label>
+            <input type="number" id="subs" value="0" min="0">
+          </div>
+          <div class="field">
+            <label>每人月費（NT$）</label>
+            <input type="number" id="subFee" value="300" min="0">
+          </div>
+        </div>
+        <div class="grid g2">
+          <div class="field">
+            <label>付費商家數</label>
+            <input type="number" id="merchants" value="0" min="0">
+          </div>
+          <div class="field">
+            <label>每家月費（NT$）</label>
+            <input type="number" id="merchantFee" value="3000" min="0">
+          </div>
+        </div>
+        <div class="field">
+          <label>月固定成本（主機 + 維護，NT$）</label>
+          <input type="number" id="fixed" value="0" min="0" step="1000">
+        </div>
+      </div>
+
+      <div>
+        <div class="calcout">
+          <div class="outrow"><span class="k">地圖 API（<span id="mapCalls">—</span> 次）</span><span class="v" id="mapCost">—</span></div>
+          <div class="outrow"><span class="k">評論 API（<span id="revCalls">—</span> 次）</span><span class="v" id="revCost">—</span></div>
+          <div class="outrow"><span class="k">搜尋 API（<span id="seaCalls">—</span> 次）</span><span class="v" id="seaCost">—</span></div>
+          <div class="outrow total"><span class="k">API 總成本</span><span class="v" id="apiTotal">—</span></div>
+          <div class="outrow" style="margin-top:8px"><span class="k">廣告收益</span><span class="v" id="adsRev">—</span></div>
+          <div class="outrow"><span class="k">訂閱 + 商家 + 固定成本</span><span class="v" id="otherRev">—</span></div>
+          <div class="outrow total"><span class="k">月損益</span><span class="v" id="profit">—</span></div>
+        </div>
+
+        <div class="statbox" style="margin-top:12px">
+          <div class="num" id="ceiling">—</div>
+          <div class="lb">流量天花板：利潤由正轉負的臨界 PV</div>
+          <div class="src">超過這個月流量，每多一個訪客就多虧一筆錢</div>
+        </div>
+
+        <div class="verdict" id="verdict">—</div>
+
+        <div class="callout" style="margin-top:12px;font-size:13px">
+          <b>單位經濟</b>：單次評論牆檢視 <span class="hl">NT$0.785</span> vs 單次廣告收益
+          <span class="hl">NT$0.150</span> ＝ <b class="hl-r">5.23 倍</b>。<br>
+          把「評論載入率」拉到 0，天花板會從 9,181 PV 跳到 12 萬 – 44 萬 PV。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>API 計價基準</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>SKU</th><th>用途</th><th class="num">免費額度／月</th><th class="num">最低付費帶單價</th></tr></thead>
+    <tbody>
+      <tr><td><b>Maps Embed API</b></td><td>嵌入地圖（iframe）</td><td class="num hl-g">無上限免費</td><td class="num">—</td></tr>
+      <tr><td>Maps JavaScript API</td><td>互動式地圖</td><td class="num">10,000</td><td class="num">$7.00／1,000</td></tr>
+      <tr><td>Maps Static API</td><td>靜態地圖圖片</td><td class="num">10,000</td><td class="num">$2.00／1,000</td></tr>
+      <tr><td>Mapbox GL JS</td><td>第三方地圖</td><td class="num">50,000</td><td class="num">$5.00／1,000</td></tr>
+      <tr><td>Geocoding API</td><td>地址轉經緯度</td><td class="num">10,000</td><td class="num">$5.00／1,000</td></tr>
+      <tr><td>Autocomplete Requests</td><td>地名自動完成</td><td class="num">10,000</td><td class="num">$2.83／1,000</td></tr>
+      <tr><td>Place Details Essentials</td><td>商家基本資料</td><td class="num">10,000</td><td class="num">$5.00／1,000</td></tr>
+      <tr><td>Place Details Pro</td><td>＋營業時間等</td><td class="num">5,000</td><td class="num">$17.00／1,000</td></tr>
+      <tr><td>Place Details Enterprise</td><td>＋照片等</td><td class="num">1,000</td><td class="num">$20.00／1,000</td></tr>
+      <tr style="background:rgba(248,113,113,.07)"><td><b>Place Details Ent+Atmosphere</b></td><td><b>＋評論</b></td><td class="num">1,000</td><td class="num hl-r">$25.00／1,000</td></tr>
+      <tr><td>Text Search Pro</td><td>搜尋商家</td><td class="num">5,000</td><td class="num">$32.00／1,000</td></tr>
+      <tr><td>Text Search Enterprise</td><td>＋更多欄位</td><td class="num">1,000</td><td class="num">$35.00／1,000</td></tr>
+      <tr><td>Text Search Ent+Atmosphere</td><td>＋評論</td><td class="num">1,000</td><td class="num">$40.00／1,000</td></tr>
+    </tbody>
+  </table></div>
+  <p class="tiny muted">匯率基準 USD/TWD = 31.4（沿用《網路平台獲利模式分析報告》口徑）；
+  廣告基準為淨 CPM NT$150／千次瀏覽。Google 採<b>分級累進計價</b>：每個用量區間單獨計費後加總。</p>
+
+  <h3>三種情境的完整試算</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>情境</th><th class="num">月 PV</th><th class="num">地圖</th><th class="num">評論</th><th class="num">搜尋</th><th class="num">API 總成本</th><th class="num">廣告收益</th><th class="num">月損益</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 個人部落格單店頁</b><br><span class="tiny muted">Maps Embed，無廣告</span></td><td class="num">10,000</td><td class="num">$0</td><td class="num">$225</td><td class="num">$0</td><td class="num">NT$7,065</td><td class="num">NT$0</td><td class="num hl-r">NT$−7,065</td></tr>
+      <tr><td><b>2 小型產業目錄</b><br><span class="tiny muted">Maps JS</span></td><td class="num">50,000</td><td class="num">$105</td><td class="num">$350</td><td class="num">$0</td><td class="num">NT$14,287</td><td class="num">NT$7,500</td><td class="num hl-r">NT$−6,787</td></tr>
+      <tr><td><b>3 規模化目錄站</b><br><span class="tiny muted">Maps JS</span></td><td class="num">200,000</td><td class="num">$630</td><td class="num">$1,475</td><td class="num">$480</td><td class="num">NT$81,169</td><td class="num">NT$30,000</td><td class="num hl-r">NT$−51,169</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout good">
+    <b>情境 1 的正確做法</b>：如果這家店是「自己的店」→ 用 <b>Business Profile API</b>，
+    審批通過後 <b>API 成本 NT$0</b>。這就是模型 A。
+  </div>
+
+  <h3>流量天花板對照表</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>技術組合</th><th class="num">最大可承受月流量</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>Maps JS（地圖 50%）＋評論 30%</td><td class="num hl-r">9,181 PV</td><td>瓶頸是評論 SKU</td></tr>
+      <tr><td>Mapbox（地圖 50%）＋評論 30%</td><td class="num hl-r">9,181 PV</td><td>換地圖供應商救不了</td></tr>
+      <tr><td>Maps Embed＋評論 30%</td><td class="num hl-r">9,181 PV</td><td>同上</td></tr>
+      <tr><td>Maps JS＋評論 <b>100%</b></td><td class="num hl-r">1,236 PV</td><td>每頁都載入評論</td></tr>
+      <tr style="background:rgba(52,211,153,.08)"><td><b>只做地圖，不秀評論</b>（Maps JS）</td><td class="num hl-g">119,609 PV</td><td rowspan="2"><b>把評論拿掉，天花板立刻跳上去</b></td></tr>
+      <tr style="background:rgba(52,211,153,.08)"><td><b>只做地圖，不秀評論</b>（Mapbox）</td><td class="num hl-g">444,237 PV</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">CPM 敏感度（Maps JS＋評論 30%）：CPM NT$50 → 4,231 PV；NT$100 → 5,793 PV；
+  <b>NT$150 → 9,181 PV</b>；NT$300 → 54,887 PV；NT$500 → 全流量區間皆獲利。
+  要把天花板拉到 5 萬 PV 以上，CPM 得是 NT$300 —— 而台灣一般媒體網站的淨 RPM 正在下滑。</p>
+
+  <div class="callout danger">
+    <b>加入固定成本 + 商家付費後的殘酷事實</b>：
+    「Mapbox ＋評論 ＋固定 NT$20,000/月 ＋ 5 商家 × NT$3,000/月」→ <b>流量再大也不會賺</b>。
+    不是流量不夠，是<b>每一個新增訪客的邊際成本永遠高於邊際收益</b>（成本斜率 NT$0.345／PV vs 收益斜率 NT$0.150／PV）。
+  </div>
+</section>
+
+<section id="alt">
+  <div class="sechead">
+    <div class="eyebrow">免費替代方案</div>
+    <h2>能解地圖，解不了評論 —— 但它解開了條款紅線</h2>
+    <p class="lead">Leaflet / MapLibre / OpenStreetMap / Nominatim / OSRM 這套完全免費的開源組合，
+    可以把<b>地圖層的成本直接歸零</b>，而且讓你<b>合法自建商家目錄</b>（不受 Google 條款 3.2.3(d) 限制）。
+    唯一沒有替代的，是<b>評論</b>。</p>
+  </div>
+
+  <div class="bigcall" style="background:linear-gradient(140deg,rgba(52,211,153,.14),rgba(52,211,153,.04))">
+    <div class="num" style="color:var(--green)">$0</div>
+    <div class="lab">地圖層月成本（MapLibre + OpenFreeMap）　|　免費、無上限、可商用、免綁信用卡</div>
+    <div class="txt">
+      換掉 Google 不只是省錢，更是<b>解除「不能自建目錄」的法律枷鎖</b>：
+      用 OSM（ODbL）蓋自己的商家資料庫完全合法，用 Google 蓋同一件事則明確違規。
+      但評論沒有便宜的合法替代 —— Yelp 免費層已消失，Enhanced <b>$299/月</b>才第一次拿到評論，
+      每則僅 <b>160 字元</b>，且條款同樣禁止自建目錄。
+    </div>
+  </div>
+
+  <h3>6.1 能力對照矩陣</h3>
+  <div class="tablewrap"><table style="min-width:900px">
+    <thead><tr><th>能力</th><th>Google</th><th>MapLibre + OpenFreeMap</th><th>Leaflet + OSM</th><th>Mapbox</th><th>TomTom</th><th>Geoapify</th><th>結論</th></tr></thead>
+    <tbody>
+      <tr><td>互動式地圖渲染</td><td>✅ Maps JS</td><td>✅ 完全同等</td><td>✅ 完全同等</td><td>✅ 更好（向量/3D）</td><td>✅</td><td>僅圖磚</td><td><span class="tag g">免費可取代</span></td></tr>
+      <tr><td>自訂樣式 / 深色模式</td><td>✅</td><td>✅ 免費</td><td>⚠️ 需自寫</td><td>✅ 最強</td><td>⚠️</td><td>⚠️</td><td><span class="tag g">可達成</span></td></tr>
+      <tr><td>地址自動完成</td><td>✅ $2.83/1k</td><td>⚠️ 需自建</td><td>⚠️ 需自建</td><td>✅ 100k 免費</td><td>✅</td><td>✅ 3k/日</td><td><span class="tag a">需自建但可行</span></td></tr>
+      <tr><td>地理編碼</td><td>✅ $5/1k</td><td>⚠️ Nominatim 1 req/s</td><td>⚠️ 同上</td><td>✅ 100k 免費</td><td>✅ 20k 免費</td><td>✅ 3k/日</td><td><span class="tag g">免費額度足夠</span></td></tr>
+      <tr><td>路線規劃</td><td>✅ 最強</td><td>✅ OSRM 自架</td><td>✅ OSRM 自架</td><td>✅</td><td>✅</td><td>⚠️</td><td><span class="tag g">可取代</span></td></tr>
+      <tr><td>街景 / 3D 建物</td><td>✅ 獨有</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td><span class="tag r">無替代</span></td></tr>
+      <tr><td>POI 商家資料</td><td>✅ 2 億+</td><td>✅ OSM</td><td>✅ OSM</td><td>✅</td><td>⚠️</td><td>✅</td><td><span class="tag g">可取代（較稀）</span></td></tr>
+      <tr><td><b>商家評分 + 評論</b></td><td>✅ 5 則完整</td><td>❌ <b>完全沒有</b></td><td>❌ <b>完全沒有</b></td><td>⚠️ 需另購</td><td>⚠️ 需另購</td><td>❌ <b>完全沒有</b></td><td><span class="tag r">無替代，死結</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">唯一沒有免費替代的兩格是<b>評論</b>與<b>街景</b>，其餘全部可以拿開源方案取代。</p>
+
+  <h3>6.2 條款重判定：換掉 Google 就不會踩 3.2.3(d)</h3>
+  <div class="tablewrap"><table style="min-width:820px">
+    <thead><tr><th>資料層</th><th>能否自建目錄</th><th>快取限制</th><th>結果</th></tr></thead>
+    <tbody>
+      <tr><td><b>Google Places</b></td><td class="hl-r">❌ 條款 3.2.3(d) 明禁</td><td>禁快取（經緯度可 30 天）</td><td>成本 ∝ PV，天花板 <b class="hl-r">9,181 PV</b></td></tr>
+      <tr><td><b>Yelp Places</b></td><td class="hl-r">❌ 條款 5(b) 禁建立</td><td>最長 24 小時</td><td>成本 ∝ 商家數，天花板 <b class="hl-g">145,110 PV</b></td></tr>
+      <tr><td><b>OSM（ODbL）</b></td><td class="hl-g">✅ 允許</td><td>鼓勵快取（須 share-alike）</td><td>可自建目錄，<b class="hl-a">但無評論</b></td></tr>
+      <tr><td><b>Geoapify</b></td><td class="hl-g">✅ 允許（明文允許暫存）</td><td>允許</td><td>可自建目錄，<b class="hl-a">但無評論</b></td></tr>
+      <tr><td><b>Trustpilot</b></td><td>✅ 限自己名下商家</td><td>Data Solutions 24h</td><td>僅取自己商家</td></tr>
+      <tr><td><b>Google BP API</b></td><td>✅ 限自己名下商家</td><td>—</td><td>API 成本 <b class="hl-g">NT$0</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout good">
+    <b>這是整個替代方案最重要的發現</b>：換掉 Google 不只是省錢，更是<b>解除了「不能自建目錄」的法律枷鎖</b>。
+    用 OSM / Geoapify 蓋自己的商家資料庫完全合法（ODbL 條件：保留歸屬、衍生庫同授權釋出）；用 Google 蓋同一件事則明確違規。
+  </div>
+
+  <h3>6.3 地圖端成本對照（月 20 萬 PV，50% 頁面載入地圖）</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>方案</th><th class="num">月成本</th><th class="num">換算 NT$</th><th>備註</th></tr></thead>
+    <tbody>
+      <tr><td>Google Maps JavaScript API</td><td class="num">$630</td><td class="num">NT$19,782</td><td>基準</td></tr>
+      <tr><td>Mapbox GL JS（50k 免費後）</td><td class="num">$250</td><td class="num">NT$7,850</td><td>50k→$0｜100k→$250｜200k→$650</td></tr>
+      <tr style="background:rgba(52,211,153,.06)"><td><b>MapLibre GL + OpenFreeMap</b></td><td class="num hl-g"><b>$0</b></td><td class="num hl-g"><b>NT$0</b></td><td><b>免費、無上限、可商用、免金卡</b></td></tr>
+      <tr><td>Leaflet + Geoapify 圖磚</td><td class="num">≈$500</td><td class="num">≈NT$15,700</td><td>4 tile = 1 credit 估算</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <b>OpenFreeMap</b> 是關鍵：MIT 授權、免費、無用量上限、<b>明確允許商用</b>、<b>不需綁信用卡</b>，
+    且相容於 MapLibre GL 與 Leaflet 兩種前端。搭配 OSM 圖磚做 fallback，等於<b>整個地圖層的邊際成本歸零</b>。
+  </div>
+
+  <h3>6.4 評論端：唯一沒有免費替代的地方</h3>
+  <div class="tablewrap"><table style="min-width:880px">
+    <thead><tr><th>方案</th><th>每月成本</th><th>每則評論可得內容</th><th>能否商用</th></tr></thead>
+    <tbody>
+      <tr><td>Google Places Ent+Atmosphere</td><td>$25/1k 起（1k 免費）</td><td><b>5 則完整評論</b>（有全文）</td><td>✅ 但禁快取 + 禁自建目錄</td></tr>
+      <tr style="background:rgba(52,211,153,.06)"><td><b>Yelp Places Enhanced</b></td><td><b>$299/月 + $6.57/1k</b></td><td><b>3 則摘錄，每則僅前 160 字元</b></td><td>✅ 但禁自建目錄</td></tr>
+      <tr><td>Yelp Places Premium</td><td>$643/月 + $14.13/1k</td><td>7 則摘錄，每則僅前 160 字元</td><td>✅ 但禁自建目錄</td></tr>
+      <tr><td>Yelp Places Base</td><td>$229/月 + $5.91/1k</td><td class="hl-r"><b>0 則</b>（不可用於展示）</td><td>✅</td></tr>
+      <tr><td>Trustpilot 公開 API</td><td>免費層 0 額度</td><td>僅「自己名下」商家的完整評論</td><td>✅ 限自用</td></tr>
+      <tr><td>Tripadvisor Content API</td><td>$0.015/1k（1,000 次終身免費）</td><td>禁快取、禁聲譽管理用途</td><td>⚠️ 限制嚴格</td></tr>
+      <tr><td>OSM / Overpass</td><td class="hl-g">$0</td><td class="hl-r"><b>完全沒有評分、沒有評論</b></td><td>✅</td></tr>
+      <tr><td>Foursquare Places</td><td>$15/1k（500 Pro 免費）</td><td>無評論</td><td>✅</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout danger">
+    <b>⚠️ 重要更正：網路上廣泛流傳的「Yelp API 每日免費幾百次」已經不存在。</b>
+    現在只有 <b>30 天試用 5,000 calls</b>（僅供評估，不得上線）。付費方案最低 $229/月起，且 <b>Enhanced 才第一次拿到評論</b>。
+    Yelp 條款 5(c) 另明文<b>禁止把 Yelp 評分與其他使用者生成的內容並列顯示</b>，5(b) 禁止建立自己的商家目錄庫 —— 與 Google 3.2.3(d) 同類限制。
+    Trustpilot 的公開 Business Units API 也<b>只能取自己名下商家</b>；要拿別人的評論正文必須申請 Data Solutions（候補名單制、無自助申請、24 小時刷新義務）。
+  </div>
+
+  <h4>同一月呼叫次數下的直接成本比較</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th class="num">月呼叫次數</th><th class="num">Google E+AA</th><th class="num">Yelp Enhanced</th><th class="num">Yelp Premium</th></tr></thead>
+    <tbody>
+      <tr><td class="num">30,000</td><td class="num">$725 / NT$22,765</td><td class="num hl-g"><b>$299 / NT$9,389</b></td><td class="num">$643 / NT$20,190</td></tr>
+      <tr><td class="num">60,000</td><td class="num">$1,475 / NT$46,315</td><td class="num hl-g"><b>$496 / NT$15,578</b></td><td class="num">$1,067 / NT$33,501</td></tr>
+      <tr><td class="num">90,000</td><td class="num">$2,225 / NT$69,865</td><td class="num hl-g"><b>$693 / NT$21,766</b></td><td class="num">$1,491 / NT$46,811</td></tr>
+      <tr><td class="num">150,000</td><td class="num">$3,475 / NT$109,115</td><td class="num hl-g"><b>$1,087 / NT$34,144</b></td><td class="num">$2,339 / NT$73,432</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">30,000 次呼叫時 <b class="hl-g">Yelp Enhanced 比 Google 便宜 2.42 倍</b>；90,000 次呼叫時 <b class="hl-g">便宜 3.21 倍</b>。</p>
+
+  <h3>6.5 關鍵結構差異：成本與流量解綁</h3>
+  <p class="muted small">同樣的 NT$150 淨 CPM，三種模型走完全不同的數學。互動式比較器：</p>
+
+  <div class="card" style="margin:16px 0">
+    <div class="grid g4" style="gap:10px;margin-bottom:12px">
+      <div><label class="small">月 PV</label><input type="number" id="alt_pv" value="200000" min="0" step="10000"></div>
+      <div><label class="small">目錄商家數</label><input type="number" id="alt_m" value="3000" min="0" step="100"></div>
+      <div><label class="small">淨 CPM (NT$)</label><input type="number" id="alt_cpm" value="150" min="0" step="10"></div>
+      <div><label class="small">主機成本 (NT$/月)</label><input type="number" id="alt_host" value="3000" min="0" step="500"></div>
+    </div>
+    <div id="alt_out" style="display:grid;gap:10px"></div>
+    <div class="verdict mid" id="alt_verdict" style="margin-top:12px">—</div>
+  </div>
+
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card tr">
+      <span class="tag r">模型 1</span>
+      <h4>Google（No Caching）</h4>
+      <p class="small muted">評論每次即時呼叫 → 成本 ∝ PV。</p>
+      <p class="small"><b class="hl-r">10k → −NT$70</b>｜50k → <b class="hl-r">−NT$6,787</b>｜200k → <b class="hl-r">−NT$51,169</b>｜400k → <b class="hl-r">−NT$102,809</b></p>
+      <p class="small"><b class="hl-r">天花板 9,181 PV</b> —— 每多一個訪客就多虧一筆。</p>
+    </div>
+    <div class="card tg">
+      <span class="tag g">模型 2</span>
+      <h4>Yelp（24h 快取）</h4>
+      <p class="small muted">每日每商家刷新一次 → 成本 ∝ 商家數，與 PV 無關。</p>
+      <p class="small"><b class="hl-g">200k → +NT$8,234</b>｜400k → <b class="hl-g">+NT$38,234</b>｜800k → <b class="hl-g">+NT$98,234</b></p>
+      <p class="small"><b class="hl-g">損益平衡 145,110 PV，比 Google 高 15.8 倍</b>。</p>
+    </div>
+    <div class="card t">
+      <span class="tag c">模型 3</span>
+      <h4>OSM / Geoapify 全快取（無評論）</h4>
+      <p class="small muted">一次性匯入 OSM（ODbL）$0；Geoapify 每日更新 2,500 家 < 免費 3,000/日 = $0；渲染 $0。</p>
+      <p class="small"><b class="hl-g">損益平衡 20,000 PV</b>；PV 上限不再由 API 決定（1,000,000 PV 仍賺 NT$147,000）。</p>
+    </div>
+  </div>
+
+  <div class="callout good">
+    <b>模型 2 的成因只有一個：Yelp 允許 24 小時快取，Google 不允許。</b>
+    這一個條款差異，把「成本 ∝ 流量」改寫成「成本 ∝ 商家數」—— 這才是替代方案真正的價值，不是省下的那幾百塊美金。
+  </div>
+
+  <h3>6.6 最省的混合方案</h3>
+  <div class="bigcall" style="background:linear-gradient(140deg,rgba(34,211,238,.13),rgba(34,211,238,.04))">
+    <div class="num" style="color:var(--cyan);font-size:clamp(22px,3.4vw,34px)">MapLibre + OpenFreeMap（$0）＋ OSM 自建目錄（$0）＋ Yelp Enhanced（3 則摘錄）</div>
+    <div class="lab">月固定成本 NT$21,766　|　損益平衡 145,110 PV　|　同 PV 下比 Google 全家桶省 2.6–7.5 倍</div>
+  </div>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th class="num">月 PV</th><th class="num">Google 全家桶</th><th class="num">混合方案</th><th class="num">省下</th></tr></thead>
+    <tbody>
+      <tr><td class="num">145,110</td><td class="num">NT$56,695</td><td class="num hl-g">NT$21,766</td><td class="num hl-g"><b>2.6 倍</b></td></tr>
+      <tr><td class="num">200,000</td><td class="num">NT$81,169</td><td class="num hl-g">NT$21,766</td><td class="num hl-g"><b>3.7 倍</b></td></tr>
+      <tr><td class="num">400,000</td><td class="num">NT$162,809</td><td class="num hl-g">NT$21,766</td><td class="num hl-g"><b>7.5 倍</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>但要誠實說清楚：評論品質遠低於 Google</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>評論品質</th><th>Google</th><th>Yelp Enhanced</th><th>Yelp Premium</th><th>OSM</th></tr></thead>
+    <tbody>
+      <tr><td>每商家則數</td><td class="hl-g"><b>5 則完整</b></td><td>3 則摘要</td><td>7 則摘要</td><td class="hl-r"><b>0</b></td></tr>
+      <tr><td>每則長度</td><td class="hl-g">全文</td><td class="hl-a"><b>前 160 字元</b></td><td class="hl-a"><b>前 160 字元</b></td><td>—</td></tr>
+      <tr><td>有星等</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td>可快取</td><td class="hl-r">❌</td><td class="hl-g">✅ 24h</td><td class="hl-g">✅ 24h</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">
+    <b>一句話總結</b><br>
+    <b>免費替代方案把「流量天花板」從 9,181 PV 解到 145,110 PV，代價是評論從 5 則全文變成 3 則 160 字摘要。</b><br>
+    <b>若放棄評論功能，天花板立刻解除到「無上限」（損益平衡僅 20,000 PV）—— 但那時產品就沒有差異化，Google 自己做得比你完整。</b>
+  </div>
+
+  <h3>6.7 務實建議</h3>
+  <div class="tablewrap"><table style="min-width:760px">
+    <thead><tr><th>你的情況</th><th>建議</th></tr></thead>
+    <tbody>
+      <tr><td>只想先<b>低成本做出來看看</b></td><td class="hl-g">✅ <b>MapLibre + OpenFreeMap + OSM</b>，API 成本 $0，先驗證介面與 SEO</td></tr>
+      <tr><td>要<b>秀評論</b>且流量要長大</td><td class="hl-g">✅ <b>Yelp Enhanced</b>（$299 起）+ 24h 快取；注意 5(b)/5(c) 條款</td></tr>
+      <tr><td>要<b>完整評論 + 免費</b></td><td class="hl-r">❌ <b>不存在</b>。只有 BP API（限自己商家，NT$0）與 Trustpilot（限自己商家）</td></tr>
+      <tr><td>要<b>街景 / 3D 建物</b></td><td class="hl-r">❌ 無替代，只能繼續買 Google</td></tr>
+      <tr><td>目標是<b>服務單一商家</b></td><td class="hl-g">⭐ <b>Business Profile API 審批</b>（檔案 ≥60 天 + 有網站）→ API 成本 NT$0、評論完整</td></tr>
+      <tr><td>要<b>自建商家目錄</b>（商業模式核心）</td><td class="hl-g">✅ <b>必須離開 Google</b>（3.2.3(d)），走 OSM ODbL + 自行處理評論授權</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout good">
+    這個替代方案清單真正改變的，是你的<b>商業模式選項</b>：原本「Google 全家桶」是一條會把天花板鎖死在 9,181 PV 的路；
+    換成 OSM + Yelp 之後，<b>「自建目錄 + 漸進取得評論授權」</b>變成了一條數學上走得通的路。
+  </div>
+</section>
+
+<section id="biz">
+  <div class="sechead">
+    <div class="eyebrow">商業模式評估</div>
+    <h2>五個模型，只有一個是白送的</h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="mcard star">
+      <div class="mh"><div class="mid">模型 A</div><div class="mt">單一商家自我評論展示 ⭐</div></div>
+      <div class="mb">
+        <p class="small"><b>做法</b>：每家商家一個頁面，顯示該商家自己的地圖與評論。</p>
+        <p class="small"><b>資料來源</b>：<b>Business Profile API</b>（可取自己名下地點的<b>全部</b>評論，且可直接回覆）</p>
+        <p class="small"><b>API 成本</b>：<span class="hl-g">NT$0</span>（Business Profile API 對已註冊商家免費）</p>
+        <p class="small"><b>審核門檻</b>：商家檔案已驗證且啟用 <b>≥ 60 天</b>、需有網站；<b>審批通過前 quota = 0 QPM</b></p>
+        <p class="small"><b>收費</b>：建置 NT$3,000–15,000／站 ＋ 月費 NT$500–3,000</p>
+        <p class="small"><b>損益</b>：20 客戶 × NT$3,000/月 ＝ <b class="hl-g">NT$60,000/月</b>，扣主機 NT$3,000 → 淨 <b class="hl-g">NT$57,000</b></p>
+        <p class="small"><b>護城河</b>：服務品質與客戶關係，不是靠資料</p>
+      </div>
+      <div class="mf"><span class="tag g">API 成本 NT$0</span><span class="hl-g">⭐⭐⭐⭐⭐ 首選</span></div>
+    </div>
+
+    <div class="mcard avoid">
+      <div class="mh"><div class="mid">模型 B</div><div class="mt">產業目錄 ／ 找店平台</div></div>
+      <div class="mb">
+        <p class="small"><b>做法</b>：抓（或查）某一產業的商家，列出清單 ＋ 地圖 ＋ 評論。</p>
+        <p class="small"><b>技術可行性</b>：✅ 高</p>
+        <p class="small"><b>條款判定</b>：❌ <b>條款 3.2.3(d) 明文禁止建立 listings or directory service</b></p>
+        <p class="small"><b>經濟判定</b>：❌ <b>流量天花板 9,181 PV，廣告模式在數學上無解</b></p>
+        <div class="callout warn" style="margin:12px 0 0;font-size:13px">
+          <b>如果非做不可怎麼改造</b>：把「目錄」改成「<b>評鑑內容</b>」——
+          主體是你寫的評測、排行、教學；地圖與評論只當佐證引用（即時請求、標歸屬、不快取）；
+          收入來自你的內容價值。實測流量若無法超過 9,181 PV 就必須調整。
+        </div>
+      </div>
+      <div class="mf"><span class="tag r">條款紅線</span><span class="hl-r">⭐☆☆☆☆ 不建議</span></div>
+    </div>
+
+    <div class="mcard star">
+      <div class="mh"><div class="mid">模型 C</div><div class="mt">商家評論監控 ／ 回覆後台</div></div>
+      <div class="mb">
+        <p class="small"><b>做法</b>：B2B 工具 —— 抓取商家全部評論、負評警示、AI 草擬回覆、回覆績效分析。</p>
+        <p class="small"><b>資料來源</b>：Business Profile API（<b>可拿全部評論 + 可回覆</b>，這是 Places API 給不了的）</p>
+        <p class="small"><b>收費</b>：NT$500–3,000／店／月</p>
+        <p class="small"><b>損益</b>：50 客戶 × NT$3,000 ＝ <b class="hl-g">NT$150,000/月</b>，淨 NT$147,000（未計人力）</p>
+        <p class="small"><b>注意</b>：BP API 審批門檻會限制初期客戶數</p>
+      </div>
+      <div class="mf"><span class="tag g">合規乾淨</span><span class="hl-g">⭐⭐⭐⭐ 值得做</span></div>
+    </div>
+
+    <div class="mcard">
+      <div class="mh"><div class="mid">模型 D</div><div class="mt">垂直產業聲譽分析</div></div>
+      <div class="mb">
+        <p class="small"><b>做法</b>：追蹤某一產業（醫美、房仲…）的評論趨勢，賣給業者與投資人。</p>
+        <p class="small"><b>關鍵前提</b>：<b>必須用合法授權的資料商</b>，不能用爬蟲，
+        也不能用 Places API 做 point-in-polygon 衍生分析（條款 3.2.3c）</p>
+        <p class="small"><b>收費</b>：訂閱制 NT$1,000–10,000／月</p>
+        <p class="small"><b>風險</b>：資料取得成本高、授權合約門檻高</p>
+      </div>
+      <div class="mf"><span class="tag a">有門檻</span><span class="hl-a">⭐⭐⭐</span></div>
+    </div>
+
+    <div class="mcard star" style="grid-column:1/-1">
+      <div class="mh"><div class="mid">模型 E</div><div class="mt">地圖 ＋ 評論當介面，價值在後端 ⭐ 長期最佳</div></div>
+      <div class="mb">
+        <div class="grid g2" style="gap:18px">
+          <div>
+            <p class="small"><b>做法</b>：網站外觀是地圖 ＋ 評論，<b>真正的價值在你自己系統</b>：
+            線上預約、報價、排隊、即時優惠券、到店回饋、評論回覆建議、AI 摘要。</p>
+            <p class="small"><b>為什麼過條款</b>：<b>通過 substantial, independent value 測試</b> —— 核心價值不在 Google 的資料上。</p>
+          </div>
+          <div>
+            <p class="small"><b>經濟結構</b>：收入來自交易佣金或 SaaS 月費，<b>不是廣告</b> → 沒有流量天花板問題。</p>
+            <p class="small"><b>對照前份報告</b>：這就是 M6（付費情報訂閱）與 M7（產業代營運）的組合。</p>
+          </div>
+        </div>
+      </div>
+      <div class="mf"><span class="tag g">通過 substantial independent value</span><span class="hl-g">⭐⭐⭐⭐⭐</span></div>
+    </div>
+  </div>
+
+  <h3>模型比較總表</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>模型</th><th class="num">API 成本</th><th>條款風險</th><th>法遵風險</th><th class="num">流量天花板</th><th>收入結構</th><th>推薦</th></tr></thead>
+    <tbody>
+      <tr><td><b>A 單商家展示</b></td><td class="num hl-g">NT$0</td><td><span class="tag g">低</span></td><td><span class="tag g">低</span></td><td class="num">無（不靠流量）</td><td>月費</td><td>✅ <b>首選</b></td></tr>
+      <tr><td>B 產業目錄</td><td class="num">高且線性</td><td><span class="tag r">高</span></td><td><span class="tag r">高</span></td><td class="num hl-r">9,181 PV</td><td>廣告</td><td>❌</td></tr>
+      <tr><td><b>C 監控後台</b></td><td class="num hl-g">NT$0</td><td><span class="tag g">低</span></td><td><span class="tag g">低</span></td><td class="num">無</td><td>月費</td><td>✅</td></tr>
+      <tr><td>D 聲譽分析</td><td class="num">中</td><td><span class="tag g">低</span></td><td><span class="tag a">中</span></td><td class="num">無</td><td>訂閱</td><td>🟡</td></tr>
+      <tr><td><b>E 後端價值</b></td><td class="num">中</td><td><span class="tag g">低</span></td><td><span class="tag g">低</span></td><td class="num">無</td><td>交易＋月費</td><td>✅ <b>長期</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>台灣法規接觸點</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4>個人資料保護法</h4>
+      <p class="small">受影響資料：評論者姓名、頭像、造訪月份（visitDate）、造訪次數、發文時間、個人檔案連結。</p>
+      <p class="small">須有<b>特定目的</b>、<b>告知義務</b>（隱私權政策需說明第三方內容來源 = Google Maps Platform API）。
+      實務上多數業者援引「Google 公開 UGC 政策」，但<b>這是需要法律評估的論點，不是自動成立的安全港</b>。</p>
+    </div>
+    <div class="card">
+      <h4>著作權法</h4>
+      <p class="small">評論是評論者的著作（言論著作／文字著作）。
+      API 授權涵蓋的是「<b>顯示</b>」，<b>不涵蓋「轉售資料」</b>。</p>
+      <p class="small">系統性抓取建庫 → 觸及著作權法第 91 條的<b>重製權</b>與<b>散布權</b>。
+      若把評論用於 AI 訓練或做成衍生資料集，風險再升高。</p>
+    </div>
+    <div class="card">
+      <h4>商標法與 Google 品牌規範</h4>
+      <p class="small">使用 Google Maps 標誌、紅色 pin、「Google Maps」字樣，必須依 <b>Google Brand Permissions</b> 處理。</p>
+      <p class="small"><b>不得讓自己的頁面看起來像是 Google Maps 官方頁面</b> —— 混淆式介面同時觸發商標法與公平交易法。</p>
+    </div>
+    <div class="card">
+      <h4>公平交易法與消保法</h4>
+      <p class="small"><b>廣告不實／誤導</b>：只顯示 5 則評論卻暗示是完整評價（見第 4.6 節）。</p>
+      <p class="small"><b>不公平交易行為</b>：以自己是「地圖＋評論平台」招徠，卻未揭露資料來自 Google。</p>
+    </div>
+  </div>
+</section>
+
+<section id="grey">
+  <div class="sechead">
+    <div class="eyebrow">灰色地帶</div>
+    <h2>量化風險，以支持「不要做」的決策</h2>
+    <p class="lead">以下模型<b>均違反 Google 條款</b>，多數同時涉及台灣法規問題。本節用途是量化風險，
+    <b>不是提供操作指引</b>。</p>
+  </div>
+
+  <div class="calc">
+    <div class="calchead">
+      <div class="ic" style="background:rgba(248,113,113,.12);color:var(--red)">⚠️</div>
+      <div>
+        <h3>期望值試算器</h3>
+        <p>EV = (1 − P) × T×C − P × L　｜　臨界機率 P* = T×C ÷ L　｜　若 P &gt; P* 則期望值為負</p>
+      </div>
+    </div>
+    <div class="calcbody">
+      <div>
+        <div class="field">
+          <label>模式</label>
+          <select id="gmPick">
+            <option value="0">GM-1 爬蟲建庫</option>
+            <option value="1">GM-2 洗評／轉售評論</option>
+            <option value="2">GM-3 混淆式介面</option>
+            <option value="3">GM-4 繞過 5 則上限做聲譽分析</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>月淨利 T×C（NT$）</label>
+          <input type="number" id="gmTc" value="50000" min="0" step="1000">
+        </div>
+        <div class="field">
+          <label>被查機率 P</label>
+          <div class="rangewrap"><input type="range" id="gmP" value="30" min="0" max="100"><span class="rv" id="gmPV">30%</span></div>
+        </div>
+        <div class="field">
+          <label>被查後總損失 L（NT$）</label>
+          <input type="number" id="gmL" value="800000" min="0" step="10000">
+        </div>
+      </div>
+      <div>
+        <div class="calcout">
+          <div class="outrow"><span class="k">期望月淨利（未被查）</span><span class="v" id="gmGain">—</span></div>
+          <div class="outrow"><span class="k">臨界機率 P*</span><span class="v" id="gmPs">—</span></div>
+          <div class="outrow"><span class="k">實際 P</span><span class="v" id="gmPr">—</span></div>
+          <div class="outrow total"><span class="k">期望值 EV</span><span class="v" id="gmEv">—</span></div>
+          <div class="outrow"><span class="k">EV ÷ (T×C)</span><span class="v" id="gmRatio">—</span></div>
+        </div>
+        <div class="verdict" id="gmVerdict">—</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>四個灰色模型的結論</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>模型</th><th class="num">T×C</th><th class="num">P</th><th class="num">L</th><th class="num">P*</th><th class="num">EV</th><th class="num">EV÷(T×C)</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td><b>GM-1 爬蟲建庫</b><br><span class="tiny muted">自建商家＋評論資料庫</span></td><td class="num">NT$50,000</td><td class="num">30%</td><td class="num">NT$800,000</td><td class="num">6.25%</td><td class="num hl-r">NT$−205,000</td><td class="num hl-r">−4.10</td><td><span class="tag r">期望值為負</span></td></tr>
+      <tr><td><b>GM-2 洗評／轉售評論</b></td><td class="num">NT$120,000</td><td class="num">55%</td><td class="num">NT$2,000,000</td><td class="num">6.00%</td><td class="num hl-r">NT$−1,046,000</td><td class="num hl-r">−8.72</td><td><span class="tag r">期望值為負</span></td></tr>
+      <tr><td><b>GM-3 混淆式介面</b><br><span class="tiny muted">假裝是 Google Maps</span></td><td class="num">NT$50,000</td><td class="num">25%</td><td class="num">NT$500,000</td><td class="num">10.00%</td><td class="num hl-r">NT$−87,500</td><td class="num hl-r">−1.75</td><td><span class="tag r">期望值為負</span></td></tr>
+      <tr><td><b>GM-4 繞過 5 則上限</b><br><span class="tiny muted">做聲譽分析 SaaS</span></td><td class="num">NT$40,000</td><td class="num">35%</td><td class="num">NT$600,000</td><td class="num">6.67%</td><td class="num hl-r">NT$−184,000</td><td class="num hl-r">−4.60</td><td><span class="tag r">期望值為負</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>規模敏感度：期望值隨規模遞減</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th class="num">規模</th><th class="num">T×C</th><th class="num">P</th><th class="num">L</th><th class="num">EV</th><th class="num">EV÷(T×C)</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1 倍</td><td class="num">NT$50,000</td><td class="num">30%</td><td class="num">NT$800,000</td><td class="num hl-r">NT$−205,000</td><td class="num hl-r">−4.10</td></tr>
+      <tr><td class="num">3 倍</td><td class="num">NT$150,000</td><td class="num">45%</td><td class="num">NT$2,400,000</td><td class="num hl-r">NT$−997,500</td><td class="num hl-r">−6.65</td></tr>
+      <tr><td class="num">10 倍</td><td class="num">NT$500,000</td><td class="num">60%</td><td class="num">NT$8,000,000</td><td class="num hl-r">NT$−4,600,000</td><td class="num hl-r">−9.20</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout danger">
+    <b>這和前一份報告的結論完全一致</b>：收益與被查機率同向增長，但<b>損失超線性增長</b>
+    （資料庫被扣押 = 全損、追訴範圍擴大、客戶集體求償）。<b>規模一大就崩壞。</b><br><br>
+    四個模型的 <b>P* 全部落在 6.00% – 10.00%</b> 的極低區間 —— 意思是這個生意在
+    「幾乎不可能被查到」的假設下才勉強能成立，而它偏偏是條款寫明禁止、且 Google 有實際執法紀錄的行為。
+  </div>
+
+  <h3>灰色 → 合法的對照表</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>灰色做法</th><th>它背後的真實需求</th><th>✅ 合法版本</th></tr></thead>
+    <tbody>
+      <tr><td>爬蟲建商家庫</td><td>想有資料資產</td><td>Business Profile API（管自己的店）＋ 合法授權的第三方資料商</td></tr>
+      <tr><td>繞過 5 則上限</td><td>想看完整評論</td><td>Business Profile API（自己的店可拿全部）</td></tr>
+      <tr><td>洗評</td><td>商家想提高排名</td><td>鼓勵商家用促換／優惠換取誠實評論；做提醒與回覆後台（模型 C）</td></tr>
+      <tr><td>混淆式介面</td><td>想讓人信任</td><td>清楚標示「本頁評論資料來自 Google Maps」，提供原始連結</td></tr>
+      <tr><td>隱藏 Google 歸屬</td><td>想省版面</td><td>用 Places UI Kit（Google 官方提供的合規元件）</td></tr>
+      <tr><td>假設評論資料自己建的</td><td>想做分析</td><td>Business Profile API 自己的店 ＋ 商家提供的第一手資料</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="tree">
+  <div class="sechead">
+    <div class="eyebrow">決策樹</div>
+    <h2>到底該做什麼</h2>
+  </div>
+  <div class="tree">你的目標是什麼？
+│
+├─ <span class="n">想賺「流量廣告」的錢</span>
+│   └─ <span class="n">❌ 這條路在數學上不成立</span>
+│       秀評論 → 天花板 9,181 PV；不秀評論 → 沒有差異化，Google 自己就做得好
+│       └─ <span class="h">💡 改做有原創內容價值的垂直部落格</span>（前份報告 M6 付費情報訂閱）
+│
+├─ <span class="y">想賺「服務商家」的錢 ⭐ 最務實</span>
+│   └─ <span class="y">✅ 走 A + C 路線</span>
+│       ├─ Business Profile API 審批（60 天 + 商家有網站）
+│       ├─ 單商家評論展示頁 + AI 回覆建議 + 負評警示
+│       ├─ 收費：建置 NT$3,000–15,000 + 月費 NT$500–3,000
+│       └─ 目標：第 6 個月 20 客戶、月營收 NT$60,000
+│
+├─ <span class="y">想賺「交易佣金」的錢 ⭐ 天花板最高</span>
+│   └─ <span class="y">✅ 走 E 路線</span>
+│       地圖 + 評論 → 導向你的預約 / 報價 / 優惠券系統
+│       地圖與評論是佐證，價值在後端 → 通過 substantial independent value
+│
+├─ <span class="h">想「先低成本做出來看看」 🆕 第 6 章</span>
+│   └─ <span class="h">✅ 走 OSM 路線（推薦）</span>
+│       MapLibre + OpenFreeMap（$0、無上限、可商用、免綁卡）+ OSM 目錄
+│       API 成本 NT$0 → 損益平衡只要 20,000 PV，天花板不再是問題
+│       <span class="n">⚠️ 代價：沒有評論 → 沒有差異化，必須靠原創內容或自有商家深度</span>
+│
+├─ <span class="h">想「有評論、而且流量要能長大」</span>
+│   └─ <span class="h">✅ 走 Yelp 路線</span>
+│       Yelp Places Enhanced（$299/月，3 則 × 160 字元）+ 24h 快取
+│       成本 ∝ 商家數而非 PV → 天花板 145,110 PV（比 Google 高 15.8 倍）
+│       <span class="n">⚠️ 條款 5(b) 禁自建目錄、5(c) 禁與其他 UGC 並列顯示</span>
+│
+└─ <span class="y">想「先做出來看看」</span>
+    └─ <span class="y">✅ 走 demo 路線</span>
+        用 Maps Embed API（免費）或 OSM + mock 資料先做出介面
+        驗證「有沒有人願意為這個介面付錢」→ 有 → 再接真 API
+        <span class="n">⚠️ 走 Google API 的話，流量上限 9,181 PV 這個前提不能忽略</span></div>
+</section>
+
+<section id="road">
+  <div class="sechead">
+    <div class="eyebrow">90 天執行路線</div>
+    <h2>三階段、兩道閘門、三個停損點</h2>
+  </div>
+
+  <h3>Phase 0（第 1–14 天）：合規確認 ＋ 介面驗證</h3>
+  <div class="card">
+    <div class="steps">
+      <div class="step"><div class="no">1</div><div class="tx"><b>申請 Google Cloud 專案</b>開啟 Billing 但<b>先設預算警示</b>（新客有 US$300 試用金，別一次燒完）</div></div>
+      <div class="step"><div class="no">2</div><div class="tx"><b>閱讀並截圖存證</b> Maps Platform 條款 3.2.3 與 Places API Policies</div></div>
+      <div class="step"><div class="no">3</div><div class="tx"><b>啟用 Maps Embed API</b>（免費無上限）做出可點的介面</div></div>
+      <div class="step"><div class="no">4</div><div class="tx"><b>確認目標商家符合 Business Profile API 資格</b>（檔案啟用 ≥60 天 ＋ 有網站）</div></div>
+      <div class="step"><div class="no">5</div><div class="tx"><b>提交 Business Profile API 審批</b> —— 審批前 quota = 0，這是排程關鍵</div></div>
+      <div class="step"><div class="no">6</div><div class="tx"><b>隱私權政策草稿</b>（明示第三方內容來源 = Google Maps Platform API）</div></div>
+      <div class="step"><div class="no">7</div><div class="tx"><b class="hl-a">停損點</b>：若目標商家不符合 BP API 資格 → 改走 Places API（成本較高、只能 5 則），報價上調或放棄</div></div>
+    </div>
+  </div>
+
+  <h3>Phase 1（第 15–45 天）：3 個付費 pilot 客戶</h3>
+  <div class="card">
+    <div class="steps">
+      <div class="step"><div class="no">8</div><div class="tx"><b>建置 3 個商家的評論展示頁</b>：每頁含 Google 歸屬 ＋ 原始連結 ＋ 排序說明 ＋ 回報連結</div></div>
+      <div class="step"><div class="no">9</div><div class="tx"><b>實作 AI 回覆草稿</b>（人工確認後送出，不自動發送）</div></div>
+      <div class="step"><div class="no">10</div><div class="tx"><b>建立法遵檢查清單</b>並在每頁自我檢查（12 項全過）</div></div>
+      <div class="step"><div class="no">11</div><div class="tx"><b>收費</b>：建置 NT$5,000 ＋ 月費 NT$1,000／站 → 3 張發票</div></div>
+      <div class="step"><div class="no">12</div><div class="tx"><b class="hl-a">停損點</b>：3 個 pilot 中少於 2 個願意付月費 → 不擴張，回到需求端重新定義產品</div></div>
+    </div>
+  </div>
+
+  <h3>Phase 2（第 46–90 天）：產品化</h3>
+  <div class="card">
+    <div class="steps">
+      <div class="step"><div class="no">13</div><div class="tx"><b>後台功能</b>：負評警示、SERP 星等追蹤、回覆績效儀表板 → 商家每週開啟 ≥1 次</div></div>
+      <div class="step"><div class="no">14</div><div class="tx"><b>收費方案定稿</b>（建置／月費／產業包裝）</div></div>
+      <div class="step"><div class="no">15</div><div class="tx"><b>累積 10 個付費客戶</b> → 月營收 NT$30,000+</div></div>
+      <div class="step"><div class="no">16</div><div class="tx"><b>評估轉向 E 路線</b>（預約／報價）→ 至少 1 個商家成交</div></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card ta">
+      <h4>Gate A（第 45 天）</h4>
+      <p class="small">付費客戶數 &lt; 2 → <b>停</b>，重新定義需求。</p>
+    </div>
+    <div class="card ta">
+      <h4>Gate B（第 90 天）</h4>
+      <p class="small">月營收 &lt; NT$30,000 且無續約率改善 → 收掉自營工具，轉為純代營運服務。</p>
+    </div>
+  </div>
+</section>
+
+<section id="risk">
+  <div class="sechead">
+    <div class="eyebrow">風險登記簿</div>
+    <h2>10 項風險與監控指標</h2>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th class="num">#</th><th>風險</th><th>機率</th><th>影響</th><th>緩解</th><th>監控指標</th></tr></thead>
+    <tbody>
+      <tr><td class="num">R1</td><td>條款 3.2.3(d) 被認定為目錄服務</td><td><span class="tag a">中</span></td><td><span class="tag r">致命</span></td><td>核心價值放後端（E 模式）；頁面明示 Google 歸屬</td><td>每次改版做條款對照表</td></tr>
+      <tr><td class="num">R2</td><td>API 成本失控</td><td><span class="tag r">高</span></td><td><span class="tag r">高</span></td><td>預算警示 ＋ 監控告警 ＋ 上限封頂</td><td>每日 API 呼叫量 vs 預算</td></tr>
+      <tr><td class="num">R3</td><td>評論數 5 則導致客訴「評價不實」</td><td><span class="tag r">高</span></td><td><span class="tag a">中</span></td><td>明示「最相關的 5 則」＋ 提供原始連結</td><td>客服工單分類</td></tr>
+      <tr><td class="num">R4</td><td>BP API 審批未通過／被拒</td><td><span class="tag a">中</span></td><td><span class="tag r">高</span></td><td>提前 60 天啟動；Places API 為備援但要重新報價</td><td>審批狀態</td></tr>
+      <tr><td class="num">R5</td><td>個資法認定未善盡告知</td><td><span class="tag a">低中</span></td><td><span class="tag a">中</span></td><td>隱私權政策 ＋ 第三方來源揭露</td><td>法遵檢查表</td></tr>
+      <tr><td class="num">R6</td><td>評論者要求移除個資</td><td><span class="tag a">低中</span></td><td><span class="tag a">中</span></td><td>建立移除流程與聯絡窗口</td><td>移除請求件數</td></tr>
+      <tr><td class="num">R7</td><td>地圖標誌使用不符品牌規範</td><td><span class="tag g">低</span></td><td><span class="tag a">中</span></td><td>依 Google Brand Permissions 處理</td><td>素材稽核</td></tr>
+      <tr><td class="num">R8</td><td>競爭者降價</td><td><span class="tag a">中</span></td><td><span class="tag a">中</span></td><td>服務與信任護城河，不靠資料</td><td>續約率</td></tr>
+      <tr><td class="num">R9</td><td>AI 回覆草擬失誤引發爭議</td><td><span class="tag a">中</span></td><td><span class="tag a">中</span></td><td>人工確認後才送出</td><td>草擬採用率</td></tr>
+      <tr><td class="num">R10</td><td>依賴單一 API 供應商</td><td><span class="tag a">中</span></td><td><span class="tag a">中</span></td><td>Places API 與 BP API 雙軌；地圖可換 Mapbox</td><td>替代方案就緒度</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="appendix">
+  <div class="sechead">
+    <div class="eyebrow">附錄</div>
+    <h2>技術實作細節</h2>
+  </div>
+
+  <h3>Places API (New) 取得評論的請求範例</h3>
+  <div class="card">
+<pre style="font-size:12.5px;overflow-x:auto;color:var(--tx2);margin:0;line-height:1.8">GET https://places.googleapis.com/v1/places/{PLACE_ID}
+     ?key={API_KEY}
+     &amp;fields=id,displayName,formattedAddress,location,rating,userRatingCount,
+             googleMapsUri,reviews,reviewSummary</pre>
+    <p class="small" style="margin-top:12px"><b>欄位取捨決定費用</b>：要求 <code>reviewSummary</code> 與 <code>reviews</code> 會進入
+    Enterprise + Atmosphere 級距（$25／1,000）。</p>
+  </div>
+
+  <h3>回應中該用的欄位</h3>
+  <div class="card">
+<pre style="font-size:12.5px;overflow-x:auto;color:var(--tx2);margin:0;line-height:1.8">{
+  "reviews": [{
+    "name": "places/.../reviews/...",
+    "rating": 5,
+    "text": { "text": "..." },
+    "publishTime": "2026-09-12T08:00:00Z",
+    "relativePublishTimeDescription": "2 個月前",
+    "authorAttribution": {
+      "displayName": "王大明",
+      "photoUri": "https://lh3.googleusercontent.com/...",
+      "uri": "https://www.google.com/maps/contrib/..."
+    },
+    "googleMapsUri": "https://www.google.com/maps/place/...?reviewId=...",
+    "flagContentUri": "https://maps.gstatic.com/..."
+  }],
+  "reviewSummary": {
+    "text": { "text": "..." },
+    "disclosureText": "...",
+    "reviewsUri": "..."
+  }
+}</pre>
+  </div>
+
+  <h3>呈現義務檢查表（每個頁面都要過）</h3>
+  <div class="grid g2">
+    <div class="card">
+      <ul class="small" style="margin:0 0 0 18px;color:var(--tx2);line-height:2.1">
+        <li>作者姓名</li>
+        <li>作者照片（空間有限也要顯示）</li>
+        <li>作者個人檔案連結</li>
+        <li><code>googleMapsUri</code> 直達原始評論</li>
+        <li>Google logo ／「Google Maps」歸屬，樣式未被修改</li>
+        <li>說明評論排序方式（預設相關性）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <ul class="small" style="margin:0 0 0 18px;color:var(--tx2);line-height:2.1">
+        <li><code>flagContentUri</code> 回報連結</li>
+        <li><code>relativePublishTimeDescription</code> 時間標示</li>
+        <li>若翻譯 → 告知使用者 ＋ 提供 <code>originalText</code></li>
+        <li>說明 Google 如何驗證評論</li>
+        <li>若用 <code>reviewSummary</code> → 逐字顯示 disclosureText、標題「Review summary」、附說明與回報連結</li>
+        <li>明確標示「顯示最相關的 5 則」並提供完整評論原始連結</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Places API vs Business Profile API</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>面向</th><th>Places API</th><th>Business Profile API</th></tr></thead>
+    <tbody>
+      <tr><td>能取的評論</td><td class="hl-r">最多 5 則</td><td class="hl-g">自己名下地點的全部（分頁）</td></tr>
+      <tr><td>能否回覆</td><td>❌</td><td class="hl-g">✅</td></tr>
+      <tr><td>審批</td><td>無</td><td><b>需審批 ＋ 檔案啟用 ≥60 天 ＋ 有網站；審批前 quota = 0</b></td></tr>
+      <tr><td>費用</td><td>依 SKU 計費</td><td class="hl-g">已註冊商家免費</td></tr>
+      <tr><td>對象</td><td>任何商家</td><td><b>只有你自己管理的商家</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>常見實作陷阱</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>陷阱</th><th>後果</th><th>正確做法</th></tr></thead>
+    <tbody>
+      <tr><td>用 Selenium 爬 Google Maps 拿評論</td><td class="hl-r">違反 3.2.3(a)(b) ＋ 個資法 ＋ 著作權法</td><td>用 API；自己的店用 BP API</td></tr>
+      <tr><td>把評論快取成自己的資料庫</td><td class="hl-r">違反 3.2.3(b)</td><td>只永久存 place_id；經緯度 30 天；評論即時請求</td></tr>
+      <tr><td>以為付更多錢可以買更多評論</td><td class="hl-r">不存在此 SKU</td><td>5 則是硬上限</td></tr>
+      <tr><td>以為排序選項能拿到「最新 5 則」</td><td class="hl-a">拿到的是「5 則的最新排列」</td><td>要真正的最新，需商家自有資料（BP API）</td></tr>
+      <tr><td>只顯示星等不顯示文字來源</td><td class="hl-a">32.4% 的評論沒有文字</td><td>標示「此評論僅有星等評分」</td></tr>
+      <tr><td>隱藏 Google 歸屬或改樣式</td><td class="hl-r">違反 Places API Policies</td><td>原樣呈現</td></tr>
+      <tr><td>以為 field mask 不影響費用</td><td class="hl-a">SKU 由欄位決定</td><td>用最少欄位達到目的</td></tr>
+      <tr><td>忘記開預算警示</td><td class="hl-r">一夜之間帳單爆炸</td><td>設預算 ＋ 每日呼叫量監控</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>資料來源與版本</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>來源</th><th>用途</th><th>版本／日期</th></tr></thead>
+    <tbody>
+      <tr><td>Google Maps Platform 條款（google.com/maps/terms、developers.google.com/maps/terms）</td><td>條款 3.2.3 四小項</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Google Maps Platform Service Specific Terms</td><td>EEA 差異</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Places API Policies</td><td>評論呈現義務</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Google Maps Platform 官方定價頁</td><td>所有 SKU 計價與免費額度</td><td>2026-10 核對</td></tr>
+      <tr><td>Google Business Profile API 文件</td><td>審批條件、配額、分頁、回覆</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>justreview.co 公開評論語料分析</td><td>5 則上限的實證影響</td><td>2026-08-21（384,482 則／2,907 商家）</td></tr>
+      <tr><td>《網路平台獲利模式分析報告》</td><td>匯率 31.4、淨 CPM NT$150／千次瀏覽</td><td>v1.0</td></tr>
+      <tr><td>OpenFreeMap 官方文件</td><td>免費向量圖磚、MIT 授權、可商用、無上限、免信用卡</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Yelp Fusion / Places API 官方定價與 Developer Terms</td><td>$229／$299／$643 三級方案、3–7 則摘錄、160 字元上限、24h 快取、條款 5(b)/5(c)</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>OSM Wiki / ODbL 授權條款</td><td>OSM 資料可商用、share-alike 與歸屬義務</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Nominatim 使用政策</td><td>1 req/s、有效 Referer、必須端快取、禁 auto-complete、禁系統性查詢</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Trustpilot 開發者文件</td><td>公開 Business Units API 僅限自己名下商家；Data Solutions 取得他人評論</td><td>查詢 2026-11-01</td></tr>
+      <tr><td>Mapbox / TomTom / Geoapify / OpenCage / MapTiler / Stadia / Foursquare / Tripadvisor 官方定價頁</td><td>免費額度與商用限制（MapTiler、Stadia 免費層禁商用）</td><td>查詢 2026-11-01</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <b>方法說明</b>：本報告所有成本、損益平衡、流量天花板與期望值數字，皆由單一驗證腳本計算產生
+    （分級累進計價模型），並以手算逐項對照；灰色模式採前份報告的期望值框架
+    <code>EV = (1−P)×T×C − P×L</code>。<b>所有數字為模型推估，非引用實績</b>，不構成法律意見或投資建議。
+  </div>
+</section>
+
+<footer>
+  <p><b>Google Maps × Reviews 實作可行性分析報告 v1.0</b>　·　2026-11-01　·　台灣法域</p>
+  <p>延伸閱讀：<a href="./platform-monetization-report-2026.html">網路平台獲利模式分析報告 v1.0</a>　·　
+     <a href="./maps-review-demo.html">可運作原型示範：地圖 + 評論牆</a></p>
+  <p class="tiny">所有數字為模型推估，非引用實績。本報告不構成法律意見或投資建議；正式營業前請諮詢執業律師與會計師。</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var FX = 31.4;
+  var PRICING = {
+    map_embed:   {label:"Maps Embed API", free:null,   bands:[]},
+    map_dynamic: {label:"Maps JavaScript API", free:10000, bands:[[100000,7.00],[500000,5.60],[1000000,4.20],[5000000,2.10],[null,0.53]]},
+    map_static:  {label:"Maps Static API", free:10000, bands:[[null,2.00]]},
+    mapbox:      {label:"Mapbox GL JS", free:50000, bands:[[null,5.00]]},
+    details_eaa: {label:"Place Details Ent+Atmosphere", free:1000, bands:[[100000,25.00],[500000,20.00],[1000000,15.00],[5000000,7.50],[null,2.28]]},
+    details_ess: {label:"Place Details Essentials", free:10000, bands:[[100000,5.00],[500000,4.00],[1000000,3.00],[5000000,1.50],[null,0.38]]},
+    search_pro:  {label:"Text Search Pro", free:5000, bands:[[100000,32.00],[500000,25.60],[1000000,19.20],[5000000,9.60],[null,2.40]]},
+    search_ent:  {label:"Text Search Enterprise", free:1000, bands:[[100000,35.00],[500000,28.00],[1000000,21.00],[5000000,10.50],[null,2.63]]}
+  };
+
+  function usdCost(sku, usage){
+    var p = PRICING[sku];
+    if(!p) return 0;
+    if(p.free === null) return 0;
+    if(usage <= p.free) return 0;
+    var cost = 0, prev = p.free;
+    for(var i=0;i<p.bands.length;i++){
+      if(usage <= prev) break;
+      var cap = p.bands[i][0], rate = p.bands[i][1];
+      var top = (cap === null) ? usage : Math.min(usage, cap);
+      cost += (top - prev)/1000 * rate;
+      prev = top;
+      if(cap === null) break;
+    }
+    return cost;
+  }
+
+  function scenario(cfg){
+    var pv = cfg.pv;
+    var mapCalls = pv * cfg.mapRate, revCalls = pv * cfg.revRate, seaCalls = pv * cfg.seaRate;
+    var cMap = usdCost(cfg.mapSku, mapCalls);
+    var cRev = usdCost(cfg.revSku, revCalls);
+    var cSea = usdCost(cfg.searchSku, seaCalls);
+    var apiUsd = cMap + cRev + cSea;
+    var ads = pv/1000 * cfg.cpm;
+    var sub = cfg.subs * cfg.subFee;
+    var mer = cfg.merchants * cfg.merchantFee;
+    var revenue = ads + sub + mer;
+    return {pv:pv, mapCalls:mapCalls, revCalls:revCalls, seaCalls:seaCalls,
+            mapUsd:cMap, revUsd:cRev, seaUsd:cSea, apiUsd:apiUsd, apiNt:apiUsd*FX,
+            ads:ads, other:sub+mer, revenue:revenue, profit: revenue - apiUsd*FX - cfg.fixed};
+  }
+
+  function maxViablePv(cfg){
+    if(scenario(merge(cfg,{pv:2000000})).profit >= 0) return null;
+    var lo=1, hi=2000000;
+    while(lo<hi){
+      var mid = Math.floor((lo+hi)/2);
+      if(scenario(merge(cfg,{pv:mid})).profit >= 0) lo = mid+1; else hi = mid;
+    }
+    return lo-1;
+  }
+  function merge(a,b){var o={},k;for(k in a)o[k]=a[k];for(k in b)o[k]=b[k];return o;}
+
+  function fmtNT(v){
+    var neg = v<0; var s = Math.abs(Math.round(v)).toLocaleString("en-US");
+    return (neg?"−NT$":"NT$")+s;
+  }
+  function fmtUS(v){
+    var neg = v<0; var s = Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg?"−$":"$")+s;
+  }
+  function fmtN(v){ return Math.round(v).toLocaleString("en-US"); }
+
+  var el = function(id){ return document.getElementById(id); };
+  var ids = ["pv","mapSku","mapRate","revRate","seaRate","revSku","cpm","subs","subFee","merchants","merchantFee","fixed"];
+  var sliders = [["mapRate","mapRateV"],["revRate","revRateV"],["seaRate","seaRateV"]];
+
+  function readCfg(){
+    return {
+      pv: Math.max(0, parseFloat(el("pv").value)||0),
+      mapSku: el("mapSku").value,
+      mapRate: (parseFloat(el("mapRate").value)||0)/100,
+      revSku: el("revSku").value,
+      revRate: (parseFloat(el("revRate").value)||0)/100,
+      searchSku: "search_pro",
+      seaRate: (parseFloat(el("seaRate").value)||0)/100,
+      cpm: parseFloat(el("cpm").value)||0,
+      subs: Math.max(0, parseFloat(el("subs").value)||0),
+      subFee: parseFloat(el("subFee").value)||0,
+      merchants: Math.max(0, parseFloat(el("merchants").value)||0),
+      merchantFee: parseFloat(el("merchantFee").value)||0,
+      fixed: parseFloat(el("fixed").value)||0
+    };
+  }
+
+  function render(){
+    sliders.forEach(function(s){ el(s[1]).textContent = el(s[0]).value + "%"; });
+    var cfg = readCfg();
+    var r = scenario(cfg);
+    var ceiling = maxViablePv(cfg);
+
+    el("mapCalls").textContent = fmtN(r.mapCalls);
+    el("revCalls").textContent = fmtN(r.revCalls);
+    el("seaCalls").textContent = fmtN(r.seaCalls);
+    el("mapCost").textContent = fmtUS(r.mapUsd) + "　(" + fmtNT(r.mapUsd*FX) + ")";
+    el("revCost").textContent = fmtUS(r.revUsd) + "　(" + fmtNT(r.revUsd*FX) + ")";
+    el("seaCost").textContent = fmtUS(r.seaUsd) + "　(" + fmtNT(r.seaUsd*FX) + ")";
+    el("apiTotal").textContent = fmtUS(r.apiUsd) + "　(" + fmtNT(r.apiNt) + ")";
+    el("adsRev").textContent = fmtNT(r.ads);
+    el("otherRev").textContent = fmtNT(r.other) + (cfg.fixed ? "　− " + fmtNT(cfg.fixed) + " 固定" : "");
+    el("profit").textContent = fmtNT(r.profit);
+    el("profit").style.color = r.profit >= 0 ? "var(--green)" : "var(--red)";
+
+    var ceilEl = el("ceiling");
+    if(ceiling === null){
+      ceilEl.textContent = "無上限";
+      ceilEl.className = "num g";
+    } else {
+      ceilEl.textContent = fmtN(ceiling) + " PV";
+      ceilEl.className = "num " + (cfg.pv > ceiling ? "r" : "a");
+    }
+
+    var v = el("verdict"), over = ceiling !== null && cfg.pv > ceiling;
+    if(r.profit >= 0 && !over){
+      v.className = "verdict ok";
+      v.innerHTML = "✅ 目前設定下<b>月損益為正</b>（" + fmtNT(r.profit) + "）。" +
+        (ceiling !== null ? "但流量超過 <b>" + fmtN(ceiling) + " PV</b> 後會轉虧 —— 這是門有上限的生意。" : "流量再大都不會虧（因為評論成本極低或為零）。");
+    } else if(over){
+      v.className = "verdict bad";
+      v.innerHTML = "❌ 已超過流量天花板 <b>" + fmtN(ceiling) + " PV</b>。" +
+        "目前 " + fmtN(cfg.pv) + " PV，<b>每多一個訪客就多虧 " +
+        fmtNT((r.apiNt - r.revenue + cfg.fixed)/Math.max(1,cfg.pv)) + "</b>。";
+    } else {
+      v.className = "verdict mid";
+      v.innerHTML = "⚠️ 目前設定下<b>月損益為負</b>（" + fmtNT(r.profit) + "）。" +
+        "收入 " + fmtNT(r.revenue) + " 撐不起 API 成本 " + fmtNT(r.apiNt) + "。" +
+        "注意：這正是「地圖＋評論目錄」的預設結局。";
+    }
+  }
+
+  ids.forEach(function(id){ var e = el(id); if(e){ e.addEventListener("input", render); e.addEventListener("change", render); } });
+  render();
+
+  /* ---- 灰色模式期望值試算器 ---- */
+  var GM = [
+    {name:"GM-1 爬蟲建庫", tc:50000,  p:30, l:800000},
+    {name:"GM-2 洗評／轉售評論", tc:120000, p:55, l:2000000},
+    {name:"GM-3 混淆式介面", tc:50000,  p:25, l:500000},
+    {name:"GM-4 繞過 5 則上限", tc:40000,  p:35, l:600000}
+  ];
+  function renderGM(){
+    var idx = parseInt(el("gmPick").value,10)||0;
+    var g = GM[idx];
+    var tc = parseFloat(el("gmTc").value)||0;
+    var p = (parseFloat(el("gmP").value)||0)/100;
+    var L = parseFloat(el("gmL").value)||0;
+    el("gmPV").textContent = el("gmP").value + "%";
+    var ps = L > 0 ? tc/L : 0;
+    var ev = (1-p)*tc - p*L;
+    el("gmGain").textContent = fmtNT((1-p)*tc);
+    el("gmPs").textContent = (ps*100).toFixed(2) + "%";
+    el("gmPr").textContent = (p*100).toFixed(0) + "%";
+    el("gmEv").textContent = fmtNT(ev);
+    el("gmEv").style.color = ev >= 0 ? "var(--green)" : "var(--red)";
+    el("gmRatio").textContent = tc>0 ? (ev/tc).toFixed(2) : "—";
+    var v = el("gmVerdict");
+    if(p > ps){
+      v.className = "verdict bad";
+      v.innerHTML = "❌ <b>" + g.name + "</b>：實際 P = " + (p*100).toFixed(0) +
+        "% ≫ 臨界機率 P* = " + (ps*100).toFixed(2) + "%　→ <b>期望值為負，不要做</b>。";
+    } else {
+      v.className = "verdict mid";
+      v.innerHTML = "⚠️ <b>" + g.name + "</b>：實際 P = " + (p*100).toFixed(0) +
+        "% < 臨界機率 P* = " + (ps*100).toFixed(2) + "%　→ 數學上可行，<b>但請先確認是否真的合規</b>。";
+    }
+  }
+  el("gmPick").addEventListener("change", function(){
+    var g = GM[parseInt(this.value,10)||0];
+    el("gmTc").value = g.tc; el("gmP").value = g.p; el("gmL").value = g.l;
+    renderGM();
+  });
+  ["gmTc","gmP","gmL"].forEach(function(id){
+    el(id).addEventListener("input", renderGM);
+  });
+  renderGM();
+})();
+
+/* ===== 免費替代方案三模型比較器（第 6 章） ===== */
+(function(){
+  "use strict";
+  var FX = 31.4;
+  var P = {
+    map_dynamic:{free:10000, bands:[[100000,7.00],[500000,5.60],[1000000,4.20],[5000000,2.10],[null,0.53]]},
+    details_eaa:{free:1000, bands:[[100000,25.00],[500000,20.00],[1000000,15.00],[5000000,7.50],[null,2.28]]},
+    search_pro: {free:5000, bands:[[100000,32.00],[500000,25.60],[1000000,19.20],[5000000,9.60],[null,2.40]]}
+  };
+  function uc(sku, usage){
+    var p = P[sku], cost = 0, prev = p.free, i, cap, rate, top;
+    if(usage <= p.free) return 0;
+    for(i=0;i<p.bands.length;i++){
+      if(usage <= prev) break;
+      cap = p.bands[i][0]; rate = p.bands[i][1];
+      top = (cap === null) ? usage : Math.min(usage, cap);
+      cost += (top - prev)/1000 * rate;
+      prev = top;
+      if(cap === null) break;
+    }
+    return cost;
+  }
+  function googleUsd(pv){
+    return uc("map_dynamic", pv*0.5) + uc("details_eaa", pv*0.3) + uc("search_pro", pv*0.10);
+  }
+  function yelpUsd(calls){
+    return 299 + Math.max(0, calls - 30000)/1000 * 6.57;
+  }
+  function fmtNT(n){
+    return "NT$" + Math.round(n).toLocaleString("en-US");
+  }
+  // 損益平衡點：最小仍獲利的 PV（成本固定時唯一交點）
+  function bePV(fn, cpm){
+    if(cpm <= 0) return Infinity;
+    var lo = 1, hi = 5000000;
+    if(fn(hi) > hi/1000*cpm) return Infinity;
+    while(lo < hi){
+      var mid = Math.floor((lo+hi)/2);
+      if(fn(mid) <= mid/1000*cpm) hi = mid; else lo = mid+1;
+    }
+    return lo;
+  }
+  // 流量天花板：最大仍獲利的 PV（成本 ∝ PV 時存在；成本固定時為無限）
+  function maxPV(fn, cpm){
+    if(cpm <= 0) return Infinity;
+    var lo = 1, hi = 5000000;
+    if(fn(lo) > lo/1000*cpm) return 0;
+    if(fn(hi) <= hi/1000*cpm) return Infinity;
+    while(lo < hi){
+      var mid = Math.floor((lo+hi+1)/2);
+      if(fn(mid) <= mid/1000*cpm) lo = mid; else hi = mid-1;
+    }
+    return lo;
+  }
+  function row(title, tagCls, tagTxt, apiNt, profit, be, ceil, extra){
+    var cls = profit >= 0 ? "hl-g" : "hl-r";
+    var bars = Math.min(100, Math.abs(profit)/50000*100);
+    var beTxt = (be===null ? '免費額內即獲利（不適用）' : (be===Infinity ? '—' : be.toLocaleString("en-US")));
+    var ceilTxt = (ceil===Infinity ? '無上限（不受流量限制）' : ceil.toLocaleString("en-US") + ' PV');
+    return '<div class="card" style="padding:14px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<b style="font-size:14.5px">'+title+'</b><span class="tag '+tagCls+'">'+tagTxt+'</span></div>' +
+      '<div class="small muted">API / 固定成本</div><div style="font-size:18px;font-weight:800;margin-bottom:2px">'+fmtNT(apiNt)+'</div>' +
+      '<div class="small muted">月損益</div><div style="font-size:18px;font-weight:800" class="'+cls+'">'+fmtNT(profit)+'</div>' +
+      '<div class="bar"><i class="'+(profit>=0?'g':'r')+'" style="width:'+bars+'%"></i></div>' +
+      '<div class="tiny muted" style="margin-top:7px">流量天花板：<b>'+ceilTxt+'</b></div>' +
+      (be===null ? '' : '<div class="tiny muted">損益平衡點：<b>'+beTxt+'</b></div>') +
+      (extra?'<div class="tiny muted" style="margin-top:3px">'+extra+'</div>':'')+'</div>';
+  }
+  function render(){
+    var pv = Math.max(0, parseFloat(document.getElementById("alt_pv").value)||0);
+    var merch = Math.max(0, parseFloat(document.getElementById("alt_m").value)||0);
+    var cpm = Math.max(0, parseFloat(document.getElementById("alt_cpm").value)||0);
+    var host = Math.max(0, parseFloat(document.getElementById("alt_host").value)||0);
+    var ads = pv/1000*cpm;
+
+    var gNt = googleUsd(pv)*FX;
+    var yCalls = merch*30;
+    var yNt = yelpUsd(yCalls)*FX;
+    var oNt = host;
+
+    var gFn = function(v){ return googleUsd(v)*FX; };
+    var gCeil = maxPV(gFn, cpm);
+    var yBe = bePV(function(){ return yelpUsd(merch*30)*FX; }, cpm);
+    var oBe = bePV(function(){ return host; }, cpm);
+
+    var out = document.getElementById("alt_out");
+    out.innerHTML =
+      row("① Google 全家桶（No Caching）","r","成本 ∝ PV", gNt, ads-gNt, null, gCeil,
+          "免費額內（PV ≲ 3,334）即獲利，但超過門檻後<b>每個訪客都虧</b>") +
+      row("② Yelp Enhanced（24h 快取）","g","成本 ∝ 商家數", yNt, ads-yNt, yBe, Infinity,
+          "· "+merch.toLocaleString("en-US")+" 家 × 30 天 = "+yCalls.toLocaleString("en-US")+" calls") +
+      row("③ OSM + MapLibre（無評論）","c","API $0", oNt, ads-oNt, oBe, Infinity,
+          merch>3000?'· ⚠️ Geoapify 每日更新超 3,000 免費額度':'· Geoapify 每日刷新仍在免費額內');
+
+    var best = null;
+    [["Google", ads-gNt],["Yelp", ads-yNt],["OSM", ads-oNt]].forEach(function(p){
+      if(!best || p[1] > best[1]) best = p;
+    });
+    var v = document.getElementById("alt_verdict");
+    if(best[1] >= 0){
+      var ratio = (yBe!==Infinity && gCeil>0 && gCeil!==Infinity) ? (yBe/gCeil).toFixed(1) : "∞";
+      v.className = "verdict ok";
+      v.innerHTML = "✅ 在 "+pv.toLocaleString("en-US")+" PV / CPM "+fmtNT(cpm)+" 下，<b>"+best[0]+
+        "</b> 模型獲利 <b>"+fmtNT(best[1])+"</b>／月　—　"+
+        "Google 流量天花板 <b class='hl-r'>"+(gCeil===Infinity?'無上限':gCeil.toLocaleString("en-US"))+" PV</b>，"+
+        "Yelp 損益平衡點 <b class='hl-g'>"+(yBe===Infinity?'—':yBe.toLocaleString("en-US"))+" PV</b>（<b>"+ratio+" 倍</b>）。";
+    }else{
+      v.className = "verdict bad";
+      v.innerHTML = "❌ 三個模型在 "+pv.toLocaleString("en-US")+" PV / CPM "+fmtNT(cpm)+" 下<b>全部虧損</b>　—　"+
+        "這正是 Google No Caching 的死結：<b>成本跟著流量一起漲</b>（天花板僅 "+
+        (gCeil===Infinity?'—':gCeil.toLocaleString("en-US"))+" PV）。";
+    }
+  }
+  ["alt_pv","alt_m","alt_cpm","alt_host"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", render);
+  });
+  render();
+})();
+
+</script>
+</body>
+</html>

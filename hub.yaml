@@ -58,6 +58,14 @@ sections:
     badge_source:
       local: "wiki/platform-monetization"
 
+  - title: "地圖評論網站可行性"
+    icon: "🗺️"
+    desc: "Google Maps 風格網站（地圖＋評論）實作可行性：條款紅線、5 則上限、成本結構與免費替代方案"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/maps-review-feasibility/"
+    badge_source:
+      local: "wiki/maps-review-feasibility"
+
   - title: "AI 技術統整"
     icon: "🤖"
     desc: "模型進展、Local LLM、Agent 與 Skill 生態"

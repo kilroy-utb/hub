@@ -5,6 +5,7 @@
 ## 子目錄
 
 - [`wiki/platform-monetization/`](./platform-monetization/) — 網路平台獲利模式分析報告（正規經營／灰色地帶／營利潛力）
+- [`wiki/maps-review-feasibility/`](./maps-review-feasibility/) — 地圖 + 評論網站實作可行性報告（條款紅線／5 則上限／免費替代方案）＋可運作 demo
 - [`wiki/finance/`](./finance/) — 財經筆記（持股、研究）
 - `wiki/` — 一般知識
 

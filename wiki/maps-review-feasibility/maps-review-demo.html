@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>找店地圖 · 免費方案可運作示範（Leaflet + OpenStreetMap）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --line:#e3e6ea; --line2:#eef1f4;
+  --tx:#202124; --tx2:#5f6368; --tx3:#80868b;
+  --blue:#1a73e8; --blue-d:#1557b0; --green:#188038; --amber:#f9ab00; --red:#d93025;
+  --shadow:0 1px 3px rgba(60,64,67,.12),0 1px 8px rgba(60,64,67,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  line-height:1.7;font-size:15px;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+button{font-family:inherit;font-size:14px;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit;font-size:14px}
+
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 18px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:900;box-shadow:var(--shadow)}
+.brand{font-size:19px;font-weight:800;color:var(--blue);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.brand .logo{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;
+  display:grid;place-items:center;font-size:16px;font-weight:800}
+.searchwrap{flex:1;min-width:240px;max-width:560px;display:flex}
+.searchwrap input{flex:1;border:1px solid var(--line);border-right:none;border-radius:20px 0 0 20px;
+  padding:9px 16px;outline:none;background:var(--bg)}
+.searchwrap input:focus{border-color:var(--blue);background:#fff}
+.searchwrap button{background:var(--blue);color:#fff;border-radius:0 20px 20px 0;padding:0 20px;font-weight:600}
+.searchwrap button:hover{background:var(--blue-d)}
+
+.mode{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:20px}
+.badge.free{background:rgba(24,128,56,.1);color:var(--green)}
+.badge.google{background:rgba(26,115,232,.1);color:var(--blue)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.keybtn{font-size:12.5px;font-weight:600;color:var(--blue);border:1px solid var(--line);
+  border-radius:20px;padding:5px 13px;background:var(--panel)}
+.keybtn:hover{background:var(--bg)}
+
+.layout{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 60px)}
+@media(max-width:900px){.layout{grid-template-columns:1fr;height:auto}}
+
+/* 左欄 */
+.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;
+  display:flex;flex-direction:column;max-height:calc(100vh - 60px)}
+.sidehead{padding:12px 16px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center}
+.sidehead b{font-size:14px}
+.sidehead span{font-size:12.5px;color:var(--tx2)}
+.filters{display:flex;gap:7px;padding:11px 16px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.fchip{font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:16px;padding:5px 13px;color:var(--tx2)}
+.fchip:hover{background:var(--bg)}
+.fchip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.list{flex:1;overflow-y:auto}
+.item{padding:13px 16px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .12s}
+.item:hover{background:var(--bg)}
+.item.on{background:#e8f0fe;box-shadow:inset 3px 0 0 var(--blue)}
+.item h4{font-size:15px;font-weight:700;margin-bottom:3px}
+.item .meta{font-size:12.5px;color:var(--tx2);display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.item .addr{font-size:12.5px;color:var(--tx2);margin-top:2px}
+
+.stars{display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.stars .bar5{position:relative;display:inline-block;color:#dadce0;letter-spacing:1px;font-size:13px}
+.stars .bar5 i{position:absolute;left:0;top:0;overflow:hidden;color:var(--amber);font-style:normal;white-space:nowrap}
+.stars .num{font-weight:700;color:var(--tx)}
+.stars .cnt{color:var(--tx2);font-size:12.5px}
+
+/* 右欄 */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+#map{height:46vh;min-height:320px;width:100%;background:#e8eaed;z-index:1}
+.detail{padding:20px 24px 60px;max-width:940px}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:18px}
+.dhead h2{font-size:22px;font-weight:700;margin-bottom:6px}
+.dhead .sub{font-size:13px;color:var(--tx2)}
+.dhead .actions{display:flex;gap:9px}
+.abtn{border:1px solid var(--line);border-radius:6px;padding:8px 15px;font-weight:600;font-size:13.5px;background:var(--panel)}
+.abtn.p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.abtn:hover{background:var(--bg)}
+.abtn.p:hover{background:var(--blue-d)}
+
+.sec{margin-bottom:26px}
+.sec h3{font-size:16px;font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:9px}
+.sec h3 .cnt{font-size:12.5px;font-weight:600;color:var(--tx2);background:var(--line2);border-radius:12px;padding:1px 9px}
+
+.rev{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:11px;background:var(--panel)}
+.rev .rh{display:flex;align-items:center;gap:11px;margin-bottom:8px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--blue);color:#fff;display:grid;
+  place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.rev .rn{font-size:14px;font-weight:700}
+.rev .rd{font-size:12px;color:var(--tx2)}
+.rev .rt{font-size:14px;color:var(--tx)}
+.src{margin-left:auto;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--line2);color:var(--tx2)}
+
+.note{border-left:3px solid var(--amber);background:#fef7e0;padding:11px 15px;border-radius:0 8px 8px 0;
+  font-size:13px;color:#5f4b00;margin:12px 0}
+.note.g{border-color:var(--green);background:#e6f4ea;color:#0d652d}
+.note.b{border-color:var(--blue);background:#e8f0fe;color:#174ea6}
+.note.r{border-color:var(--red);background:#fce8e6;color:#a50e0e}
+
+.compliance{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-top:22px;overflow:hidden}
+.compliance summary{cursor:pointer;padding:13px 17px;font-weight:700;font-size:14px;list-style:none;
+  display:flex;align-items:center;justify-content:space-between}
+.compliance summary::-webkit-details-marker{display:none}
+.compliance summary:after{content:"▾";color:var(--tx3)}
+.compliance[open] summary:after{content:"▴"}
+.cbody{padding:0 17px 16px;font-size:13px;color:var(--tx2)}
+.cbody table{width:100%;border-collapse:collapse;margin:8px 0}
+.cbody th,.cbody td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;font-size:12.5px}
+.cbody th{background:var(--bg);font-weight:700}
+
+.costbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:9px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--tx2);box-shadow:0 -1px 4px rgba(60,64,67,.08)}
+.costbar b{color:var(--tx);font-weight:700}
+.costbar .pill{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:3px 11px}
+
+.modal{position:fixed;inset:0;background:rgba(32,33,36,.55);z-index:1000;display:none;
+  align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border-radius:14px;max-width:520px;width:100%;padding:26px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.mbox h3{font-size:18px;margin-bottom:10px}
+.mbox p{font-size:13.5px;color:var(--tx2);margin-bottom:12px}
+.mbox input{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px 13px;outline:none;margin-bottom:12px}
+.mbox input:focus{border-color:var(--blue)}
+.mbtns{display:flex;gap:9px;justify-content:flex-end;margin-top:6px}
+.mfoot{margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);font-size:12px;color:var(--tx3)}
+
+.empty{padding:40px 20px;text-align:center;color:var(--tx3);font-size:14px}
+.leaflet-popup-content h5{font-size:14px;font-weight:700;margin-bottom:3px}
+.leaflet-popup-content .p-meta{font-size:12px;color:var(--tx2)}
+.leaflet-popup-content button{margin-top:7px;font-size:12.5px;font-weight:600;color:var(--blue)}
+.attrib-note{font-size:11.5px;color:var(--tx3);margin-top:9px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="logo">◉</span> 找店地圖</div>
+  <div class="searchwrap">
+    <input id="q" type="text" placeholder="搜尋店家、類別或地址…" autocomplete="off">
+    <button id="go">搜尋</button>
+  </div>
+  <div class="mode">
+    <span class="badge free" id="modeBadge"><span class="dot"></span><span id="modeTxt">免費模式 · OSM + Leaflet</span></span>
+    <button class="keybtn" id="keyBtn">接上 Google Places API</button>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidehead">
+      <b id="listTitle">台北市 店家</b>
+      <span id="listCount">—</span>
+    </div>
+    <div class="filters">
+      <button class="fchip on" data-cat="all">全部</button>
+      <button class="fchip" data-cat="餐廳">餐廳</button>
+      <button class="fchip" data-cat="咖啡">咖啡</button>
+      <button class="fchip" data-cat="購物">購物</button>
+      <button class="fchip" data-cat="景點">景點</button>
+    </div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <main class="main">
+    <div id="map"></div>
+    <div class="detail" id="detail"></div>
+  </main>
+</div>
+
+<div class="costbar">
+  <span class="pill">資料層：<b id="cbSrc">OSM / Leaflet</b></span>
+  <span class="pill">今日 API 呼叫：<b id="cbCalls">0</b></span>
+  <span class="pill">本月估計 API 成本：<b id="cbCost">NT$0</b></span>
+  <span class="pill">資料來源歸屬：<b>© OpenStreetMap contributors</b></span>
+  <span class="pill" id="cbMode">模式：免費（$0）</span>
+</div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <h3>接上 Google Places API（真實資料）</h3>
+    <p>貼上你的 Google Maps Platform API 金鑰，即可把示範切換成真實的 Places API (New)。
+       <b>需自行綁定帳單</b>；Places API (New) 的評論欄位屬 <b>Ent+Atmosphere</b> SKU（$25／1,000，免費額 1,000／月）。</p>
+    <input id="keyInput" type="text" placeholder="AIza...（金鑰僅存在於本頁瀏覽器）">
+    <div class="mbtns">
+      <button class="abtn" id="keyCancel">取消</button>
+      <button class="abtn" id="keyClear">清除金鑰</button>
+      <button class="abtn p" id="keyOk">啟用</button>
+    </div>
+    <div class="mfoot">⚠️ 金鑰不會上傳到任何伺服器，只存在於這個頁面的記憶體中。</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<script>
+/* ============================================================
+   找店地圖 — 免費方案可運作示範
+   免費模式：Leaflet + OpenStreetMap 圖磚 + 本地 mock 商家目錄（ODbL 邏輯）
+   真實模式：Google Places API (New) + 5 則評論上限
+   ============================================================ */
+(function(){
+  "use strict";
+
+  var FX = 31.4;
+  var TAIWAN = [25.0330, 121.5654];
+
+  /* ---------- Mock 商家目錄（模擬 OSM 匯入後自建目錄） ---------- */
+  var PLACES = [
+    {id:"p1", name:"青鳥咖啡 青田店", cat:"咖啡", rating:4.6, count:328, addr:"台北市大安區青田街 12 號", lat:25.0261, lng:121.5396, price:"$$",
+     tel:"02 2375-1122", hours:"09:00 – 21:00",
+     reviews:[
+      {a:"王小綠",r:5,t:"光線超舒服，離捷運站只要三分鐘。拿鐵的油脂很厚，店员也會記得我的口味。",d:"2026-10-18"},
+      {a:"陳彥廷",r:4,t:"安靜、位置好找，但週末下午幾乎沒位子，建議先線上排隊。",d:"2026-09-30"},
+      {a:"Kai",r:5,t:"第二次來了。老屋改建的空間保留了木頭紋路，插座位置也夠多，適合工作。",d:"2026-08-22"},
+      {a:"林怡君",r:3,t:"咖啡不錯但甜點選擇偏少，兩人同行建議先訂位。",d:"2026-07-14"}
+     ]},
+    {id:"p2", name:"老陳牛肉麵 · 台北車站店", cat:"餐廳", rating:4.3, count:1204, addr:"台北市中正區忠孝西路一段 40 號", lat:25.0478, lng:121.5170, price:"$",
+     tel:"02 2311-5566", hours:"24 小時",
+     reviews:[
+      {a:"張家豪",r:4,t:"半夜還開著真的方便。湯頭偏鹹，牛肉切得厚實，份量足。",d:"2026-10-25"},
+      {a:"Nora",r:5,t:"排隊二十分鐘值得。乾拌的比湯麵好吃很多，蔥花給得很實在。",d:"2026-10-02"},
+      {a:"阿德",r:4,t:"老店的樣子，乾淨、速度快。座位少，站著吃也可以。",d:"2026-06-11"}
+     ]},
+    {id:"p3", name:"西門町老城散策區", cat:"景點", rating:4.4, count:8542, addr:"台北市萬華區漢中街 50 號", lat:25.0417, lng:121.5084, price:"",
+     tel:"", hours:"全天",
+     reviews:[
+      {a:"小美",r:5,t:"晚上最熱鬧，電影街周邊都有攤位。建議從武昌街走進去，比較少人潮。",d:"2026-10-20"},
+      {a:"Ken",r:4,t:"週末人真的多到爆炸。想拍好照片建議早上十點前到。",d:"2026-09-15"},
+      {a:"鄭文",r:4,t:"阿宗麵線附近那條巷子很好逛，但紅樓那一帶現在觀光客導向很明顯。",d:"2026-05-03"}
+     ]},
+    {id:"p4", name:"松山文創園區", cat:"景點", rating:4.5, count:6210, addr:"台北市松山區菸廠路 88 號", lat:25.0438, lng:121.5404, price:"",
+     tel:"", hours:"園區 10:00–22:00",
+     reviews:[
+      {a:"鄭怡君",r:5,t:"展覽品質在台灣算前段，動線規劃不會塞。也有餐廳可以中途休息。",d:"2026-10-28"},
+      {a:"Martin",r:4,t:"免費的建築本身比展覽更值得看。假日人潮多，建議平日來。",d:"2026-08-08"}
+     ]},
+    {id:"p5", name:"大安森林公園", cat:"景點", rating:4.6, count:9137, addr:"台北市大安區新生南路三段 270 號", lat:25.0303, lng:121.5314, price:"免費",
+     tel:"", hours:"06:00–23:00",
+     reviews:[
+      {a:"周杰倫",r:5,t:"市區裡最好的免費公園。繞一圈大概 40 分鐘，兩側都有洗手間。",d:"2026-10-12"},
+      {a:"Sofia",r:5,t:"早上跑步的人很多，籃球場要排隊。草地維護得很漂亮。",d:"2026-09-01"},
+      {a:"老王",r:4,t:"晚上會有蟬叫，季節感的 authentic。假日停車位非常難找。",d:"2026-06-20"}
+     ]},
+    {id:"p6", name:"光合箱子 · 信義區", cat:"咖啡", rating:4.2, count:512, addr:"台北市信義區松壽路 22 號", lat:25.0338, lng:121.5680, price:"$",
+     tel:"02 2722-9988", hours:"08:00 – 20:00",
+     reviews:[
+      {a:"冠廷",r:4,t:"外帶速度快，公園對面價格友善。店內座位少，大多是外帶客。",d:"2026-10-09"},
+      {a:"Yumi",r:3,t:"可頌現烤的不錯但咖啡偏酸。看得到101，不過要站在門口。",d:"2026-07-29"}
+     ]},
+    {id:"p7", name:"永康街米店", cat:"餐廳", rating:4.7, count:1567, addr:"台北市大安區永康街 42 號", lat:25.0362, lng:121.5489, price:"$$$",
+     tel:"02 2392-1234", hours:"11:30 – 21:30",
+     reviews:[
+      {a:"陳媽媽",r:5,t:"兒子生日在這裡辦的，十二人桌位很舒服。服務不催客。",d:"2026-10-22"},
+      {a:"Derek",r:5,t:"價位偏高但值。套餐從頭到尾有節奏，甜點是一大亮點。",d:"2026-10-06"},
+      {a:"小魚",r:4,t:"訂位難排。菜色穩定但環境偏吵，約會建議訂包廂。",d:"2026-08-19"}
+     ]},
+    {id:"p8", name:"師大生活百貨", cat:"購物", rating:4.1, count:2380, addr:"台北市大安區師大路 93 號", lat:25.0244, lng:121.5290, price:"$",
+     tel:"02 2369-2000", hours:"11:00 – 23:00",
+     reviews:[
+      {a:"阿哲",r:4,t:"學生時代的回憶。便宜、能挖寶，但近年觀光客變多。",d:"2026-09-18"},
+      {a:"Ping",r:3,t:"營業時間寫 11 點，實際 12 點才開。週一很多店休息。",d:"2026-06-05"}
+     ]},
+    {id:"p9", name:"象山親山步道", cat:"景點", rating:4.8, count:14205, addr:"台北市信義區松山路 369 號", lat:25.0330, lng:121.5717, price:"免費",
+     tel:"", hours:"全天",
+     reviews:[
+      {a:"Mountain",r:5,t:"六個 hexagonal 涼亭拍101是最經典的角度。假日要排隊，平日上午幾乎沒人。",d:"2026-10-30"},
+      {a:"佳玲",r:5,t:"全程約 40 分鐘、有階梯，膝蓋不好要評估。第一次去建議抓兩小時。",d:"2026-10-11"},
+      {a:"Echo",r:4,t:"蚊子多，秋天比較好。有捷運站很方便，下雨天石階很滑。",d:"2026-07-25"}
+     ]},
+    {id:"p10", name:"迪化街南北貨商圈", cat:"購物", rating:4.4, count:3405, addr:"台北市大同區迪化街一段 73 號", lat:25.0625, lng:121.5100, price:"$",
+     tel:"", hours:"店家約 10:00–21:00",
+     reviews:[
+      {a:"王媽",r:5,t:"過年採辦一定要來。老字號的南北貨比超市便宜又fresh。",d:"2026-10-16"},
+      {a:"Ivan",r:4,t:"很多店有製程觀賞可看，值得慢慢逛。週日部分店家休息。",d:"2026-09-05"}
+     ]},
+    {id:"p11", name:"南機場夜市", cat:"餐廳", rating:4.3, count:5201, addr:"台北市萬華區Machinan? 街 101 號", lat:25.0268, lng:121.5012, price:"$",
+     tel:"", hours:"17:00 – 00:30",
+     reviews:[
+      {a:"胖虎",r:5,t:"藥燉排骨必點。排隊大概 20 分鐘，邊走邊吃。",d:"2026-10-21"},
+      {a:"Sandy",r:4,t:"比寧夏夜市更在地。攤位之間的巷子也可以鑽，有很多沒排隊的名店。",d:"2026-08-14"}
+     ]},
+    {id:"p12", name:"寶藏巖國際藝術村", cat:"景點", rating:4.5, count:1876, addr:"台北市中正區汀州路 1 號", lat:25.0329, lng:121.5190, price:"免費",
+     tel:"", hours:"園區 10:00–18:00",
+     reviews:[
+      {a:"Mark",r:5,t:"藏在山邊的藝文空間，展覽常常很實驗。安靜，值得專程來。",d:"2026-10-08"},
+      {a:"小惠",r:4,t:"有view可以看河景。交通不算方便，搭公車到寶藏巖站再走。",d:"2026-06-30"}
+     ]}
+  ];
+  PLACES[10].addr = "台北市萬華區西園路一段 101 號";
+
+  var state = {places:PLACES, selected:PLACES[0], cat:"all", mode:"free", key:null, calls:0, reviewCalls:0};
+  var map, markers = {}, layer;
+
+  /* ---------- 地圖初始化（Leaflet + OSM 圖磚） ---------- */
+  function initMap(){
+    map = L.map("map", {zoomControl:true, attributionControl:false}).setView(TAIWAN, 13);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    L.control.attribution({prefix:'Leaflet | © OpenStreetMap contributors'}).addTo(map);
+    layer = L.layerGroup().addTo(map);
+    drawMarkers();
+  }
+
+  function starHtml(rating, count){
+    var pct = Math.max(0, Math.min(100, (rating/5)*100));
+    return '<span class="stars"><span class="bar5">★★★★★<i style="width:'+pct+'%">★★★★★</i></span>'+
+           '<span class="num">'+rating.toFixed(1)+'</span>'+
+           (count!=null?'<span class="cnt">('+count.toLocaleString("en-US")+')</span>':'')+'</span>';
+  }
+
+  function drawMarkers(){
+    layer.clearLayers(); markers = {};
+    state.places.forEach(function(p){
+      var m = L.marker([p.lat, p.lng]).addTo(layer);
+      m.bindPopup(
+        '<h5>'+esc(p.name)+'</h5>'+
+        '<div class="p-meta">'+starHtml(p.rating, p.count)+'</div>'+
+        '<div class="p-meta">'+esc(p.addr)+'</div>'+
+        '<button onclick="window.__demoSelect(\''+p.id+'\')">查看評論 →</button>'
+      );
+      markers[p.id] = m;
+    });
+  }
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  window.__demoSelect = function(id){
+    var p = state.places.filter(function(x){return x.id===id;})[0];
+    if(p){ select(p); }
+  };
+
+  /* ---------- 左側列表 ---------- */
+  function visible(){
+    var q = (document.getElementById("q").value||"").trim().toLowerCase();
+    return state.places.filter(function(p){
+      if(state.cat!=="all" && p.cat!==state.cat) return false;
+      if(!q) return true;
+      return (p.name+p.cat+p.addr).toLowerCase().indexOf(q)>=0;
+    });
+  }
+
+  function renderList(){
+    var list = document.getElementById("list"), arr = visible();
+    document.getElementById("listCount").textContent = arr.length + " 家";
+    if(!arr.length){ list.innerHTML='<div class="empty">沒有符合的店家<br><span class="tiny">免費方案下，OSM 在台灣的商家覆蓋率低於 Google</span></div>'; return; }
+    list.innerHTML = arr.map(function(p){
+      return '<div class="item'+(state.selected&&state.selected.id===p.id?' on':'')+'" data-id="'+p.id+'">'+
+        '<h4>'+esc(p.name)+'</h4>'+
+        '<div class="meta">'+starHtml(p.rating,p.count)+'<span>·</span><span>'+esc(p.cat)+'</span><span>·</span><span>'+esc(p.price||"—")+'</span></div>'+
+        '<div class="addr">'+esc(p.addr)+'</div></div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll(".item"),function(it){
+      it.addEventListener("click",function(){
+        var p = state.places.filter(function(x){return x.id===it.dataset.id;})[0];
+        if(p) select(p);
+      });
+    });
+  }
+
+  /* ---------- 右側詳情 + 評論牆 ---------- */
+  function renderDetail(){
+    var p = state.selected;
+    var d = document.getElementById("detail");
+    if(!p){ d.innerHTML='<div class="empty">左側選擇一家店家</div>'; return; }
+
+    var isGoogle = state.mode==="google";
+    var revs = p.reviews||[];
+    var srcBadge = isGoogle
+      ? '<span class="src" style="background:rgba(26,115,232,.12);color:var(--blue)">Google Places API (New)</span>'
+      : '<span class="src">Mock 目錄 + OSM</span>';
+
+    var noteHtml = isGoogle
+      ? '<div class="note r"><b>Places API (New) 硬性上限：每家最多 5 則評論</b>（依相關性排序，無分頁、無 token、付更多錢也解鎖不了）。<br>'+
+        '本示範目前顯示 <b>'+revs.length+' 則</b>。條款 3.2.3(b) <b>禁止快取</b> → 每次進入都必須重新呼叫，成本 ∝ 流量。</div>'
+      : '<div class="note g"><b>免費模式：沒有評論 API。</b>OSM 提供商家基本資料，但<b>完全沒有評分、也沒有評論</b>。'+
+        '此處的評論為示範用 mock 資料，實際營運須自行取得合法授權（例如 Yelp Enhanced，或商家自己的 Business Profile API）。</div>';
+
+    d.innerHTML =
+      '<div class="dhead">'+
+        '<div><h2>'+esc(p.name)+'</h2>'+
+          '<div class="sub">'+starHtml(p.rating,p.count)+' &nbsp;·&nbsp; '+esc(p.cat)+' &nbsp;·&nbsp; '+esc(p.price||"—")+' &nbsp;·&nbsp; '+esc(p.hours||"")+'</div>'+
+          '<div class="sub" style="margin-top:5px">'+esc(p.addr)+(p.tel?' &nbsp;·&nbsp; '+esc(p.tel):'')+'</div>'+
+        '</div>'+
+        '<div class="actions">'+
+          '<button class="abtn">分享</button><button class="abtn p">儲存</button>'+
+        '</div>'+
+      '</div>'+
+
+      noteHtml+
+
+      '<div class="sec"><h3>評價 <span class="cnt">'+revs.length+' 則'+(isGoogle?'（API 上限 5 則）':'')+'</span></h3>'+
+        (revs.length ? revs.map(function(r){
+          return '<div class="rev">'+
+            '<div class="rh"><div class="avatar">'+esc(r.a.charAt(0))+'</div>'+
+              '<div><div class="rn">'+esc(r.a)+'</div>'+
+              '<div class="rd">'+starHtml(r.r,null)+' &nbsp;·&nbsp; '+esc(r.d)+'</div></div>'+
+              srcBadge+'</div>'+
+            '<div class="rt">'+esc(r.t)+'</div></div>';
+        }).join('') : '<div class="note">此來源沒有評論。</div>')+
+      '</div>'+
+
+      '<details class="compliance" open><summary>⚖️ 合規與資料來源檢查表（此示範刻意做在畫面上）</summary>'+
+        '<div class="cbody">'+
+          '<table><thead><tr><th>項目</th><th>免費模式（Leaflet + OSM）</th><th>Google Places API 模式</th></tr></thead><tbody>'+
+          '<tr><td>地圖渲染</td><td>✅ Leaflet + OSM 圖磚，成本 $0</td><td>⚠️ Maps JS $7／1,000</td></tr>'+
+          '<tr><td>商家資料</td><td>✅ OSM（ODbL）可自建目錄</td><td>❌ 條款 3.2.3(d) 禁建目錄</td></tr>'+
+          '<tr><td>評論</td><td>❌ OSM 完全沒有</td><td>✅ 最多 5 則，但禁快取</td></tr>'+
+          '<tr><td>成本結構</td><td>✅ 固定（主機費）</td><td>❌ 成本 ∝ 流量</td></tr>'+
+          '<tr><td>歸屬義務</td><td>必須標示 © OpenStreetMap contributors；衍生庫須同 ODbL 授權釋出</td><td>必須顯示 Google logo、星等、評論者姓名/照片，並可回報移除</td></tr>'+
+          '<tr><td>呈現義務</td><td>無（因為沒有評論）</td><td>一整包：姓名、照片、連結、免費使用聲明</td></tr>'+
+          '</tbody></table>'+
+          '<div class="note b" style="margin-top:12px">本示範的圖磚來自 <b>openstreetmap.org</b> 公開 tile server。'+
+          '正式營運請改用自建瓦片伺服器或商業圖磚供應商（如 OpenFreeMap、MapTiler），以符合 OSM Tile Usage Policy 並避免被打斷。</div>'+
+        '</div></details>';
+  }
+
+  /* ---------- 成本計量 ---------- */
+  function updateCost(){
+    document.getElementById("cbCalls").textContent = state.calls;
+    var usd;
+    if(state.mode==="google"){
+      // Text Search Pro ($32/1k, 免費 5k) + Place Details Ent+Atmosphere ($25/1k, 免費 1k)
+      var searchCalls = state.calls - state.reviewCalls;
+      usd = graded(searchCalls, 5000, [[100000,32.00],[500000,25.60],[1000000,19.20],[5000000,9.60],[null,2.40]])
+          + graded(state.reviewCalls, 1000, [[100000,25.00],[500000,20.00],[1000000,15.00],[5000000,7.50],[null,2.28]]);
+      document.getElementById("cbSrc").textContent = "Google Places API (New)";
+      document.getElementById("cbMode").textContent = "模式：Google（成本 ∝ 流量）";
+    }else{
+      usd = 0;
+      document.getElementById("cbSrc").textContent = "OSM / Leaflet（自建目錄）";
+      document.getElementById("cbMode").textContent = "模式：免費（$0）";
+    }
+    document.getElementById("cbCost").textContent = "NT$" + Math.round(usd*FX).toLocaleString("en-US");
+  }
+  function graded(usage, free, bands){
+    if(usage<=free) return 0;
+    var cost=0, prev=free;
+    for(var i=0;i<bands.length;i++){
+      if(usage<=prev) break;
+      var cap=bands[i][0], rate=bands[i][1];
+      var top=(cap===null)?usage:Math.min(usage,cap);
+      cost += (top-prev)/1000*rate; prev=top;
+      if(cap===null) break;
+    }
+    return cost;
+  }
+
+  /* ---------- 選取 ---------- */
+  function select(p){
+    state.selected = p;
+    renderList(); renderDetail();
+    if(markers[p.id]){ map.setView([p.lat,p.lng], 16, {animate:true}); markers[p.id].openPopup(); }
+    if(state.mode==="google") fetchGooglePlace(p);
+  }
+
+  /* ---------- Google Places API (New) 真實模式 ---------- */
+  function fetchGooglePlace(p){
+    var head = {"Content-Type":"application/json","X-Goog-Api-Key":state.key,"X-Goog-FieldMask":"places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.reviews"};
+    fetch("https://places.googleapis.com/v1/places:searchText",{
+      method:"POST", headers:head,
+      body: JSON.stringify({textQuery:p.name+" "+p.addr, languageCode:"zh-TW", maxResultCount:1})
+    }).then(function(r){ return r.json(); }).then(function(d){
+      var place = (d.places&&d.places[0]);
+      if(!place){ p.reviews=[]; renderDetail(); return; }
+      state.calls++; state.reviewCalls++;
+      p.id = place.id||place.name||p.id;
+      p.name = place.displayName?.text || p.name;
+      p.addr = place.formattedAddress || p.addr;
+      p.rating = place.rating!=null?place.rating:p.rating;
+      p.count = place.userRatingCount!=null?place.userRatingCount:p.count;
+      if(place.location){ p.lat=place.location.latitude; p.lng=place.location.longitude; }
+      p.reviews = (place.reviews||[]).slice(0,5).map(function(r){
+        return {a:(r.authorAttribution?.displayName)||"匿名", r:r.rating||0,
+                t:(r.text?.text||"").slice(0,160), d:(r.publishTime||"").slice(0,10)};
+      });
+      updateCost(); renderList(); renderDetail();
+    }).catch(function(err){
+      var n=document.getElementById("detail");
+      n.insertAdjacentHTML("afterbegin",
+        '<div class="note r"><b>Places API 呼叫失敗：</b>'+esc(err.message||String(err))+
+        '。<br>請確認金鑰有效、已啟用 Places API (New)，且已綁定帳單。</div>');
+    });
+  }
+
+  /* ---------- 互動 ---------- */
+  function wire(){
+    document.getElementById("go").addEventListener("click", function(){ renderList(); });
+    document.getElementById("q").addEventListener("input", renderList);
+    Array.prototype.forEach.call(document.querySelectorAll(".fchip"),function(c){
+      c.addEventListener("click",function(){
+        Array.prototype.forEach.call(document.querySelectorAll(".fchip"),function(x){x.classList.remove("on");});
+        c.classList.add("on"); state.cat=c.dataset.cat; renderList();
+      });
+    });
+    document.getElementById("keyBtn").addEventListener("click",function(){
+      document.getElementById("modal").classList.add("on");
+      document.getElementById("keyInput").focus();
+    });
+    document.getElementById("keyCancel").addEventListener("click",function(){
+      document.getElementById("modal").classList.remove("on");
+    });
+    document.getElementById("keyClear").addEventListener("click",function(){
+      state.key=null; state.mode="free";
+      document.getElementById("keyInput").value="";
+      document.getElementById("modal").classList.remove("on");
+      setModeBadge(); updateCost(); renderDetail();
+    });
+    document.getElementById("keyOk").addEventListener("click",function(){
+      var k=(document.getElementById("keyInput").value||"").trim();
+      if(!k){ alert("請貼上 API 金鑰"); return; }
+      state.key=k; state.mode="google"; state.calls=0; state.reviewCalls=0;
+      document.getElementById("modal").classList.remove("on");
+      setModeBadge(); updateCost(); renderDetail();
+      if(state.selected) fetchGooglePlace(state.selected);
+    });
+  }
+
+  function setModeBadge(){
+    var b=document.getElementById("modeBadge");
+    if(state.mode==="google"){
+      b.className="badge google";
+      document.getElementById("modeTxt").textContent="Google Places API (New)";
+      document.getElementById("keyBtn").textContent="切回免費模式";
+    }else{
+      b.className="badge free";
+      document.getElementById("modeTxt").textContent="免費模式 · OSM + Leaflet";
+      document.getElementById("keyBtn").textContent="接上 Google Places API";
+    }
+  }
+
+  initMap(); wire(); renderList(); renderDetail(); updateCost();
+})();
+</script>
+</body>
+</html>
