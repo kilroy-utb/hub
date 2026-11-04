@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Workflow SOP — Kilroy's Hub</title>
+  <meta name="description" content="Project-oriented 多 agent pipeline 的標準作業程序：角色、管線、關卡、審查契約、失效模式防護。">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="../../">← Kilroy's Hub</a> ›
+      <a href="../">Wiki 知識庫</a> ›
+      <span>Agent Workflow SOP</span>
+    </nav>
+<h1>Project-Oriented Multi-Agent Workflow（可重用 SOP）</h1>
+<blockquote>
+<p>本文件為 <strong>agent 可遵循的標準作業程序</strong>。任何 agent 團隊（主 agent + sub agent）都可依此執行一個「研究／產出」型專案。</p>
+<p>來源：由一次真實模擬（2026 美國期中選舉對馬斯克的影響研究）萃取而成，含該次執行暴露的失效模式與對應防護。
+情境式交付物在 <code>/workspace/projects/&lt;專案代號&gt;/</code>，本檔在 <code>/workspace/AGENT_WORKFLOW.md</code>。</p>
+</blockquote>
+<hr>
+<h2>0. 核心原則（違反即流程失效）</h2>
+<ol>
+<li><strong>單一事實來源（Single Source of Truth）</strong>：spec 是唯一裁定基準。sub agent 一律以 spec 為準，衝突時 spec 勝出。</li>
+<li><strong>關卡不可跳過</strong>：Gate 1（需求意圖）、Gate 2（規格核准）必須由需求者拍板。sub agent <strong>絕不可</strong>代需求者決定。</li>
+<li><strong>審查是硬性回退，不是建議</strong>：review 判定不通過，必須回到對應的前一 pipe 重作，而非「提醒注意」。</li>
+<li><strong>每個 pipe 都要有退出條件</strong>：沒有 exit criteria 就無法判斷該放行還是回退。</li>
+<li><strong>缺失要明寫，不得腦補</strong>：查不到就寫「查無資料」並說明原因。禁止用同類事件、歷史類比或合理化敘述填空。</li>
+<li><strong>全程 append-only 紀錄</strong>：每個 pipe 的輸入、輸出、verdict、重試次數、回退決策都要留痕。</li>
+</ol>
+<hr>
+<h2>1. 角色定義</h2>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>定位</th>
+<th>職責</th>
+<th>不可做</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>#1 Planner</strong>（主 agent）</td>
+<td>專案負責人</td>
+<td>規劃、拆 shard、派工、寫 spec、裁決、交付、確保紀錄完整</td>
+<td>不得代需求者做需求決定</td>
+</tr>
+<tr>
+<td><strong>#2 Reviewer</strong>（sub agent）</td>
+<td>獨立稽核者</td>
+<td>需求審 → 研究審 → 文件審；發回不合格項</td>
+<td>不得自行修改產物、不得代需求者決定</td>
+</tr>
+<tr>
+<td><strong>#3 Researcher</strong>（sub agent）</td>
+<td>取證者</td>
+<td>依 spec 上網蒐集事實與素材</td>
+<td>不得推論未發生之事、不得超出 spec 範圍</td>
+</tr>
+<tr>
+<td><strong>#4 Document maker</strong>（sub agent）</td>
+<td>產出者</td>
+<td>依 spec + 已核准研究筆記產出文件</td>
+<td>不得自行上網補資料、不得發明內容</td>
+</tr>
+</tbody></table>
+<h3>1.1 Planner 的五項核心責任</h3>
+<ol>
+<li><strong>交付物定義</strong> — 明確檔名、格式、語言、量化表要求</li>
+<li><strong>模型配對</strong> — 依角色特質指派模型（見 §9）</li>
+<li><strong>Fork 排程</strong> — 決定何時 fork 幾個 sub agent、平行度、並行槽位管理</li>
+<li><strong>網路蒐集範圍界定</strong> — 什麼要查、查多深、引用截止時點為何</li>
+<li><strong>Reviewer 審查項目定義</strong> — 每個 gate 要檢查什麼寫進 spec 審查基準</li>
+</ol>
+<h3>1.2 Reviewer 為何必須獨立</h3>
+<p>Reviewer 是唯一有權「發回」的節點。三道防護缺一不可：</p>
+<ul>
+<li><strong>角色隔離</strong> — Reviewer 不參與研究與撰寫</li>
+<li><strong>清單式審查</strong> — 審查項目事先寫死在 spec，不是臨場發揮</li>
+<li><strong>結構化輸出</strong> — 禁止「整體看起來不錯」這種無效回饋</li>
+</ul>
+<p>若環境不支援模型覆寫（見 §9.2），角色隔離與清單式審查就是防止橡皮章的唯一手段，<strong>必須執行到位</strong>。</p>
+<hr>
+<h2>2. 管線總覽</h2>
+<table>
+<thead>
+<tr>
+<th>Pipe</th>
+<th>擁有者</th>
+<th>動作</th>
+<th>產出</th>
+<th>退出條件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>0</strong></td>
+<td>#1</td>
+<td>建立專案骨架與紀錄檔</td>
+<td>目錄 + <code>PIPELINE_LOG.md</code></td>
+<td>目錄與模板就位</td>
+</tr>
+<tr>
+<td><strong>1.1</strong></td>
+<td>#1 + 需求者</td>
+<td>確認需求（<strong>Gate 1</strong>）</td>
+<td><code>01-requirements.md</code></td>
+<td>需求者確認意圖無誤</td>
+</tr>
+<tr>
+<td><strong>1.2</strong></td>
+<td>#2</td>
+<td>問答式需求審查</td>
+<td><code>02-review-requirements.md</code></td>
+<td>VERDICT PASS 且無高嚴重度 finding</td>
+</tr>
+<tr>
+<td><strong>1.3</strong></td>
+<td>#1</td>
+<td>撰寫 spec</td>
+<td><code>00-spec.md</code></td>
+<td>spec 覆蓋全部已定案決策</td>
+</tr>
+<tr>
+<td><strong>1.4</strong></td>
+<td>需求者</td>
+<td>核准 spec（<strong>Gate 2</strong>）</td>
+<td>spec 凍結</td>
+<td>需求者核准，狀態改為 FROZEN</td>
+</tr>
+<tr>
+<td><strong>2.1</strong></td>
+<td>#1</td>
+<td>fork 研究 shard</td>
+<td>agent 指派明細寫入 log</td>
+<td>shard 數與維度對應表一致</td>
+</tr>
+<tr>
+<td><strong>2.2</strong></td>
+<td>#3</td>
+<td>平行蒐集</td>
+<td><code>10-research-S*.md</code></td>
+<td>每個 shard 具備編號發現 + 查無資料清單</td>
+</tr>
+<tr>
+<td><strong>2.3</strong></td>
+<td>#2</td>
+<td>審查研究</td>
+<td><code>20-review-research.md</code></td>
+<td>VERDICT PASS；否則回 2.2</td>
+</tr>
+<tr>
+<td><strong>3.1</strong></td>
+<td>#1</td>
+<td>fork 文件 agent，附 spec + 已核准語料</td>
+<td>派工紀錄</td>
+<td>交付素材齊備</td>
+</tr>
+<tr>
+<td><strong>3.2</strong></td>
+<td>#4</td>
+<td>產出文件</td>
+<td><code>30-document.md</code> / <code>.html</code></td>
+<td>章節序與 spec 一致、全文可回溯</td>
+</tr>
+<tr>
+<td><strong>3.3</strong></td>
+<td>#2</td>
+<td>審查文件</td>
+<td><code>40-review-document.md</code></td>
+<td>VERDICT PASS；否則回 3.2</td>
+</tr>
+<tr>
+<td><strong>4.1</strong></td>
+<td>#1 + #2</td>
+<td>最終確認，決定是否回退</td>
+<td>回退決策</td>
+<td>判定通過或指定回退點</td>
+</tr>
+<tr>
+<td><strong>4.2</strong></td>
+<td>#1</td>
+<td>通知需求者完成</td>
+<td>交付連結 + 審查摘要</td>
+<td>需求者收到</td>
+</tr>
+<tr>
+<td><strong>4.3</strong></td>
+<td>#1</td>
+<td>補齊紀錄</td>
+<td><code>PIPELINE_LOG.md</code> 完整</td>
+<td>每 pipe 皆有紀錄</td>
+</tr>
+</tbody></table>
+<h3>2.1 迭代上限與升級</h3>
+<ul>
+<li>同一 pipe 最多 <strong>3 輪</strong></li>
+<li>第 3 輪仍不通過 → 升級為需求者決策（決策 pack），由需求者選擇：<strong>放寬標準 / 修改需求（升版 spec）/ 停案</strong></li>
+<li>研究審不通過 → 回 Pipe2.2（補蒐集）</li>
+<li>文件審不通過 → 回 Pipe3.2（重寫文件）</li>
+</ul>
+<h3>2.2 回退原則</h3>
+<p>回退以「回到最近一次需求者核准版本」為準，<strong>不重開 Gate 1</strong>。spec 凍結後的變更一律升版（V1.0.1 → V1.0.2），並重新經需求者核准。</p>
+<hr>
+<h2>3. 檔案與目錄慣例</h2>
+<pre><code>/workspace/projects/&lt;專案代號&gt;/
+├── 00-spec.md                    # 單一事實來源（Gate 2 後 FROZEN）
+├── 01-requirements.md            # 需求草案 + 需求者回覆紀錄
+├── 02-review-requirements.md     # Reviewer 需求審查
+├── 10-research-S1.md … S*.md     # 研究 shard 筆記
+├── 20-review-research.md         # Reviewer 研究審查
+├── 30-document.md                # 主交付
+├── 30-document.html              # 次交付
+├── 40-review-document.md         # Reviewer 文件審查
+└── PIPELINE_LOG.md               # append-only 唯一 audit trail
+</code></pre>
+<p><strong>命名規則</strong>：檔名前綴代表 pipe 階段（<code>0x</code> 規劃／<code>1x</code> 需求／<code>2x</code> 研究／<code>3x</code> 文件／<code>4x</code> 終審），流水號管線內唯一。<code>PIPELINE_LOG.md</code> 為全案唯一例外。</p>
+<p><strong>紀錄檔表格格式</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>Pipe</th>
+<th>時間 (UTC)</th>
+<th>擁有者</th>
+<th>輸入</th>
+<th>產出</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1.1</td>
+<td>2026-11-04 09:20</td>
+<td>#1 Planner</td>
+<td>需求者請求</td>
+<td><code>01-requirements.md</code></td>
+<td>DONE</td>
+</tr>
+</tbody></table>
+<p>狀態值固定用：<code>DONE</code> / <code>IN PROGRESS</code> / <code>FIX → 需需求者拍板</code> / <code>待 Gate N</code> / <code>BLOCKED</code>。<strong>不要留下過期的 IN PROGRESS</strong>。</p>
+<hr>
+<h2>4. Gate 機制（與宿主對話協定的格式契約）</h2>
+<p>Gate 是需求者拍板的關卡。<strong>每則 Gate 訊息都必須以 options block 結尾</strong>，否則宿主會視為回合結束。</p>
+<h3>Gate 1（需求意圖）</h3>
+<pre><code class="language-options">{&quot;type&quot;:&quot;approval&quot;,&quot;stage&quot;:&quot;gate_1_requirements&quot;,&quot;required&quot;:true,&quot;prompt&quot;:&quot;Does this accurately reflect my intent?&quot;,&quot;choices&quot;:[{&quot;id&quot;:&quot;confirm&quot;,&quot;label&quot;:&quot;Looks good, continue&quot;,&quot;default&quot;:true}]}
+</code></pre>
+<h3>Gate 2（規格核准）</h3>
+<pre><code class="language-options">{&quot;type&quot;:&quot;approval&quot;,&quot;stage&quot;:&quot;gate_2_spec&quot;,&quot;required&quot;:true,&quot;version&quot;:&quot;V1.0.0&quot;,&quot;prompt&quot;:&quot;Is this specification approved for implementation?&quot;,&quot;choices&quot;:[{&quot;id&quot;:&quot;approve&quot;,&quot;label&quot;:&quot;Approve and start implementation&quot;,&quot;default&quot;:true}]}
+</code></pre>
+<h3>決策包（多題選單）</h3>
+<pre><code class="language-options">{&quot;type&quot;:&quot;decision_pack&quot;,&quot;stage&quot;:&quot;discovery&quot;,&quot;required&quot;:true,&quot;choices&quot;:[],&quot;prompt&quot;:&quot;Select one option from each group&quot;,&quot;questions&quot;:[{&quot;id&quot;:&quot;1&quot;,&quot;prompt&quot;:&quot;Target setup&quot;,&quot;choices&quot;:[{&quot;id&quot;:&quot;A&quot;,&quot;label&quot;:&quot;Desktop browser (recommended)&quot;,&quot;default&quot;:true},{&quot;id&quot;:&quot;B&quot;,&quot;label&quot;:&quot;Mobile&quot;}]}]}
+</code></pre>
+<p><strong>格式契約（機讀，勿改）</strong>：頂層 <code>choices</code> 陣列留空，真選項放 <code>questions</code>；<code>questions[].id</code> 必須是<strong>數字</strong>；<code>questions[].choices[].id</code> 必須是<strong>單一英文字母</strong>；<code>type</code> / <code>stage</code> / <code>id</code> / <code>label</code> 等鍵名保持英文原文；<code>prompt</code> 與 <code>label</code> 使用與周遭訊息相同的語言。</p>
+<h3>注意事項</h3>
+<ul>
+<li>一則訊息最多問 3 題為佳；題數過多時改用兩階段。</li>
+<li>每題都要給<strong>具體可執行的預設答案</strong>，使用者才可能一鍵決定。</li>
+<li>提問前先用散文把背景講清楚，options block 裡只留標籤。</li>
+<li>交付完成後若無待決事項，<strong>不要</strong>再附 options block。</li>
+</ul>
+<hr>
+<h2>5. Reviewer 審查契約</h2>
+<p>所有審查輸出格式固定，<strong>不可改寫成敘述性意見</strong>：</p>
+<pre><code>VERDICT: PASS | FIX | FAIL
+FINDINGS:
+[F-1] 嚴重度(高/中/低) | 問題描述 | 建議處置 | 定位:檔案:行號
+QUESTIONS:            ← 僅需求審查階段使用
+[Q-1] 問題 | 為何要問（會改變什麼） | 建議預設答案
+</code></pre>
+<p><strong>規則</strong>：</p>
+<ol>
+<li><code>VERDICT</code> 必須是單獨一行，置於輸出最上方。</li>
+<li>每個 finding 都要有<strong>精確定位</strong>（<code>檔案:行號</code>），否則 owner 無法處置。</li>
+<li>Finding 聚焦「會導致研究失敗或返工」的問題，不要列格式小建議。</li>
+<li>Reviewer 不得修改被審查的產物，只能提要求。</li>
+<li>需求審查時，<code>QUESTIONS</code> 是主要產出——把模糊處挑出來交需求者拍板，而不是自己決定。</li>
+</ol>
+<hr>
+<h2>6. Researcher 取證規範</h2>
+<h3>6.1 四級證據標籤（強制）</h3>
+<table>
+<thead>
+<tr>
+<th>標籤</th>
+<th>定義</th>
+<th>附加要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>已證實</code></td>
+<td>有具名來源直接支持</td>
+<td>附 URL + 存取日期</td>
+</tr>
+<tr>
+<td><code>合理推估</code></td>
+<td>由已證實事實合理外推</td>
+<td>附依據來源 + 方向 + 不確定度（高／中／低）</td>
+</tr>
+<tr>
+<td><code>情境假設</code></td>
+<td>假設性推演，無直接證據</td>
+<td>標明前提與不可驗證性</td>
+</tr>
+<tr>
+<td><code>查無資料</code></td>
+<td>原理上或實務上查不到</td>
+<td>說明原因；<strong>不得用同類事件代替</strong></td>
+</tr>
+</tbody></table>
+<h3>6.2 硬性規則</h3>
+<ol>
+<li><strong>引用截止時點</strong> — spec 必須指定一個截止時刻，之後的資訊一律不得引用。</li>
+<li><strong>禁精確數字預測</strong> — 不得預測股價漲跌幅、合約金額等未發生的數字。<strong>但已發生的歷史數據可以且必須查實</strong>（量化表需要）。</li>
+<li><strong>一手來源優先</strong> — 官方選務機構、法條與政府公告、公司財報與 10-K、SEC 文件、法院文件、機關公告；二手媒體僅供交叉驗證，並須區分「事實報導」與「評論／預測」。</li>
+<li><strong>矛盾不取捨</strong> — 找到互相矛盾的來源時<strong>兩者都記錄</strong>並標明矛盾點。</li>
+<li><strong>編號穩定</strong> — 每條發現給 <code>S&lt;n&gt;-#&lt;N&gt;</code> 連續編號，文件端據此引用，編號一旦發布不得重編。</li>
+<li><strong>查無資料清單</strong> — 每個 shard 結尾必附：查了什麼、為何查不到。</li>
+<li><strong>自評段</strong> — shard 結尾誠實列出哪些要求項目只部分完成、哪些可能有誤，供 Reviewer 判斷是否補蒐集。</li>
+</ol>
+<h3>6.3 產出結構模板</h3>
+<pre><code class="language-markdown"># S&lt;n&gt; 研究筆記：&lt;主題&gt;
+&gt; 對應 spec：&lt;維度／層次&gt;。依據 00-spec.md v1.0.0（FROZEN）。引用截止時點：&lt;時點&gt;。
+
+## 0. 查詢紀錄            ← 搜尋關鍵字與來源網域，讓審查者能重現
+## 1. 核心發現            ← S&lt;n&gt;-#N 連續編號，每條附來源與標籤
+## 2. …（依維度分節）
+## 6. 查無資料清單
+## 7. 限制與不確定性
+## 8. 自評
+</code></pre>
+<hr>
+<h2>7. Document maker 規格</h2>
+<ol>
+<li><strong>只用已核准的研究筆記</strong> — 引用時標註 shard 與編號（如 <code>S3-#4</code>）。</li>
+<li><strong>不得自行上網補齊</strong> — 研究筆記未覆蓋者寫「查無資料」並列入附錄。</li>
+<li><strong>全文可回溯</strong> — 每一條陳述都要能對回某個研究筆記編號。</li>
+<li><strong>章節序由 spec 固定</strong> — 文件端不得自創章節或調整順序。</li>
+<li><strong>多格式必須同源</strong> — HTML 版由 Markdown 版轉換而來，內容一致，不得額外發明。</li>
+<li><strong>美觀屬於審查項目</strong> — 表格可讀性、層級、術語一致、無錯字、無殘留佔位符，都算審查基準。</li>
+</ol>
+<hr>
+<h2>8. Spec 撰寫清單（Planner 必備）</h2>
+<p>一份合格的 spec 至少包含：</p>
+<ol>
+<li><strong>研究命題</strong> — 一句話寫清楚要回答什麼問題</li>
+<li><strong>因果方向</strong> — 明確寫出，避免下游各自發揮</li>
+<li><strong>前提的操作性定義</strong> — 量化門檻、可驗證的成立條件</li>
+<li><strong>引用截止時點</strong></li>
+<li><strong>語言、格式、交付清單、量化表要求</strong></li>
+<li><strong>時間跨度</strong> — 基線期 / 聚焦期 / 歷史對照</li>
+<li><strong>事實處理原則</strong> — 證據標籤、禁止事項、混淆因素切割線</li>
+<li><strong>維度表</strong> — 每個維度寫清「涵蓋內容」與「要回答的關鍵問題」</li>
+<li><strong>每維度的撰寫結構</strong>（例如四欄：影響內容／反饋反制／時程／歸因強度）</li>
+<li><strong>研究分片對應表</strong> — shard → 維度 → 主題 → 產出檔名</li>
+<li><strong>研究端取證規範與禁止事項</strong></li>
+<li><strong>文件端章節序與審查基準</strong></li>
+<li><strong>流程治理</strong> — 審查契約、迭代上限、變更與回退規則、紀錄要求</li>
+<li><strong>已知風險與限制</strong> — 隨 spec 一併凍結，避免下游踩雷</li>
+</ol>
+<hr>
+<h2>9. 模型指派與 Fork 策略</h2>
+<h3>9.1 理想配對</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>特質需求</th>
+<th>建議層級</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>#1 Planner</td>
+<td>全局判斷、拆解、協調</td>
+<td>最強推理模型</td>
+</tr>
+<tr>
+<td>#2 Reviewer</td>
+<td>嚴謹、不被說服</td>
+<td>最強推理模型（推理強度調高）</td>
+</tr>
+<tr>
+<td>#3 Researcher</td>
+<td>大量取證、可平行</td>
+<td>快模型，成本敏感</td>
+</tr>
+<tr>
+<td>#4 Document maker</td>
+<td>排版與文筆</td>
+<td>中等成本，重文筆</td>
+</tr>
+</tbody></table>
+<h3>9.2 環境限制與退路（實測必讀）</h3>
+<p><code>spawn_agent</code> 的 <code>model</code> 參數<strong>不一定被 runtime 支援</strong>。實測可能回傳：</p>
+<pre><code>invalid params, unknown model &#39;gpt-5.6-sol&#39; (2013)
+</code></pre>
+<p><strong>退路</strong>：省略 <code>model</code> 參數，sub agent 繼承主模型。此時：</p>
+<ul>
+<li>「用不同模型避免 reviewer 與作者同質化」的防護失效</li>
+<li>必須改用<strong>角色隔離 + 事先寫死的清單式審查契約 + 不同 prompt 焦點</strong>來防止橡皮章</li>
+<li>先用一個最廉價的試探性 spawn 驗證模型覆寫是否可用，再正式派工，<strong>避免整批派工失敗</strong></li>
+</ul>
+<h3>9.3 Fork 與並行槽位</h3>
+<ul>
+<li><strong>shard 數 ≤ 維度分組數</strong>，且每個 shard 必須對應到 spec 的維度，不得重疊。</li>
+<li><code>fork_context=false</code> + 讓 sub agent <strong>自行讀檔</strong>（spec、log）通常優於把全文塞進 prompt：省 token、且保證它們看到的是同一份凍結版本。</li>
+<li>sub agent <strong>必須</strong>收到完整作業規範（標籤規則、禁止事項、輸出格式、輸出路徑），不能假設它們看過對話。</li>
+<li>Reviewer 建議<strong>常駐不關閉</strong>，以維持跨 pipe 的一致裁定脈絡；但若並行槽位吃緊，可在 gate 前關閉、gate 時重 fork 並附上前一輪審查摘要作為 context。</li>
+<li><code>wait_agent</code> 一次可傳多個 target，用最長 timeout 等第一個完成者，不要用短 timeout 輪流試探。</li>
+</ul>
+<hr>
+<h2>10. 已知失效模式與防護</h2>
+<p>以下皆為實測踩過的坑，直接沿用防護可省下整輪返工。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>失效模式</th>
+<th>徵狀</th>
+<th>防護</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>sub agent 代需求者決定</strong></td>
+<td>Reviewer 直接給出需求答案並往下走</td>
+<td>spec 明寫「不得代決」；Planner 轉交時保留選項按鈕，由需求者按</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>無共同基準，各 shard 各自漂移</strong></td>
+<td>同一份報告建立在不同版本的「大勝」定義上</td>
+<td>spec 寫入<strong>量化操作性定義</strong>，讓層 A 與層 B 共用同一基準</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>前提與事實混寫</strong></td>
+<td>情境推演被讀成已發生的事實</td>
+<td>強制雙層結構，審查列為首要查核項</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>文件端腦補</strong></td>
+<td>研究缺口被模型自己的知識填滿</td>
+<td>spec 明禁；文件端寫「查無資料」並附附錄；Reviewer 逐條比對研究筆記編號</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>維度表混類</strong></td>
+<td>同一格既是影響又是證據來源，shard 寫法不一致</td>
+<td>維度重構為「影響維度／反饋反制／影響時程／參照案例」四類欄位</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>缺時程維度</strong></td>
+<td>「影響」變成無時點的模糊陳述</td>
+<td>每項影響必標：數日內／數月內／一至四年</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>缺混淆因素切割</strong></td>
+<td>同期非選舉事件被歸因給選舉</td>
+<td>每項影響標歸因強度（選舉直接／間接／背景因素）＋ 專節收納非選舉因素</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>審查變成橡皮章</strong></td>
+<td>Reviewer 說「大致 OK」就放行</td>
+<td>結構化 verdict ＋ 精確定位 ＋ 清單式審查項目</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>無限迴圈</strong></td>
+<td>研究審反覆退回改到天荒地老</td>
+<td>每 pipe 上限 3 輪，第 3 輪升級需求者決策</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>時序基準矛盾</strong></td>
+<td>投票日與執行日寫法不一致，引用合法性存疑</td>
+<td>spec 固定「引用截止時點」，所有數字標明截止時間</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>只寫預測宣稱</strong></td>
+<td>「兩院過半」被寫成既成事實，但正式認證可能為 0 席</td>
+<td>報告須<strong>並呈</strong>預測宣稱與正式認證進度兩個欄位</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>模型覆寫失敗導致整批派工失敗</strong></td>
+<td>所有 spawn 立刻報 unknown model</td>
+<td>先用最廉價試探 spawn 驗證，再正式派工</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>shard 交接時素材無法回溯</strong></td>
+<td>文件端引用研究筆記但對不上編號</td>
+<td>強制 <code>S&lt;n&gt;-#&lt;N&gt;</code> 連續穩定編號，文件端須標編號</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>紀錄留白</strong></td>
+<td>log 只有表格沒有細節，事後無法稽核</td>
+<td>每 pipe 追加：輸入、輸出、verdict、重試次數、回退決策、agent ID</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>需求者中途追加交付物</strong></td>
+<td>新增產出不在凍結 spec 的交付清單內</td>
+<td>不改 spec，另立附帶產出並在 log 標註為「需求者追加，非 spec 變更」</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>11. 快速啟動 Checklist</h2>
+<h3>開始前</h3>
+<ul>
+<li><input disabled="" type="checkbox"> 建立專案目錄與 <code>PIPELINE_LOG.md</code></li>
+<li><input disabled="" type="checkbox"> 確認 <code>spawn_agent</code> 的模型覆寫是否可用（試探一次）</li>
+<li><input disabled="" type="checkbox"> 確認可並行槽位數（影響 shard 切分）</li>
+</ul>
+<h3>Pipe 1（需求與規格）</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Gate 1 需求意圖確認（options block）</li>
+<li><input disabled="" type="checkbox"> fork Reviewer 做問答式需求審查</li>
+<li><input disabled="" type="checkbox"> 轉交需求者拍板（決策 pack，含建議預設答案）</li>
+<li><input disabled="" type="checkbox"> 寫 spec（§8 清單全覆蓋）</li>
+<li><input disabled="" type="checkbox"> Gate 2 核准 → spec 凍結（FROZEN）</li>
+</ul>
+<h3>Pipe 2（研究）</h3>
+<ul>
+<li><input disabled="" type="checkbox"> shard 切分對應維度，寫入 log</li>
+<li><input disabled="" type="checkbox"> 每個 shard prompt 內含完整取證規範與輸出路徑</li>
+<li><input disabled="" type="checkbox"> 收齊後 fork Reviewer 審研究，審查項目對照 spec 審查基準</li>
+<li><input disabled="" type="checkbox"> 不通過 → 回 2.2，計入迭代輪次</li>
+</ul>
+<h3>Pipe 3（文件）</h3>
+<ul>
+<li><input disabled="" type="checkbox"> 派工時附 spec + 已核准研究筆記</li>
+<li><input disabled="" type="checkbox"> 產出後 fork Reviewer 審查（正確性／完整性／雙層分離／可回溯／結構／美化／多格式一致）</li>
+<li><input disabled="" type="checkbox"> 不通過 → 回 3.2</li>
+</ul>
+<h3>Pipe 4（交付）</h3>
+<ul>
+<li><input disabled="" type="checkbox"> #1 + #2 最終確認</li>
+<li><input disabled="" type="checkbox"> 決定是否回退</li>
+<li><input disabled="" type="checkbox"> 通知需求者：交付連結 + 審查摘要</li>
+<li><input disabled="" type="checkbox"> 補齊 <code>PIPELINE_LOG.md</code>，確認每個 pipe 皆有紀錄</li>
+</ul>
+<hr>
+<h2>12. 最小可行變體</h2>
+<p>時間或槽位有限時，可縮減為：</p>
+<pre><code>1.1 Gate 1 → 1.2 Reviewer 需求審 → 1.3 spec → Gate 2
+2.1-2.2 單一 Researcher（不拆 shard，但維度要全覆蓋）
+2.3 Reviewer 研究審
+3.1-3.2 Document maker → 3.3 Reviewer 文件審
+4.1-4.3 交付與紀錄
+</code></pre>
+<p><strong>不可縮減的部分</strong>：Gate 1、Gate 2、兩道 Reviewer 審查、審查契約、append-only 紀錄。縮減的是 shard 數與規格篇幅，不是關卡本身。</p>
+<hr>
+<p><strong>版本</strong>：v1.0.0 ｜ <strong>來源</strong>：2026-11-04 專案模擬萃取 ｜ <strong>維護者</strong>：#1 Planner</p>
+
+  </div>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

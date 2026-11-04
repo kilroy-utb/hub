@@ -66,6 +66,14 @@ sections:
     badge_source:
       local: "wiki/maps-review-feasibility"
 
+  - title: "Agent Workflow SOP"
+    icon: "🤝"
+    desc: "多 agent pipeline 標準作業程序：角色分工、管線關卡、審查契約、失效模式防護"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/agent-workflow/"
+    badge_source:
+      local: "wiki/agent-workflow"
+
   - title: "AI 技術統整"
     icon: "🤖"
     desc: "模型進展、Local LLM、Agent 與 Skill 生態"
