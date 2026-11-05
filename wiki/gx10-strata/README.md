@@ -6,13 +6,14 @@
 
 ---
 
-## 三支程式各做什麼
+## 五支程式各做什麼
 
 | 程式 | 角色 | 什麼時候跑 |
 |---|---|---|
 | [`gx10-strata-install.sh`](#一gx10-strata-installsh安裝) | **安裝**：環境檢查 → 取得程式碼 → 編譯引擎 → 下載模型 → 產生設定 → 開 systemd → 驗收 | 一開始跑一次 |
 | [`gx10-strata-smoke.sh`](#二gx10-strata-smokesh測試) | **測試**：檢查崩潰、查 experts 常駐、量 tok/s、量 CPU 忙碌度、取樣記憶體 | 想確認效能或懷疑退化時跑 |
 | [`gx10-patch-ple.py`](#三gx10-patch-plepy設定調整) | **小幫手**：把 `--ple-io ram` 寫進設定檔（安裝腳本第 5 步會自動呼叫） | 通常不用手動執行 |
+| [`gx10-patch-ttft.py`](#五gx10-patch-ttftpy降低首字等待) | **小幫手**：開啟對話快取等參數，讓 agent 續接時不用重讀整段歷史（會先驗證引擎支援） | 裝完後建議跑一次 |
 | [`gx10-free-mem.sh`](#四gx10-free-memsh記憶體釋放) | **釋放記憶體**：卸載 Ollama 模型、收掉殘留推論行程、清 page cache | 安裝前記憶體不夠時跑 |
 
 > 這三支都是**純腳本**，不取代 Strata 官方的 `setup.py`。安裝本身仍是 `git clone` + `cmake` + `setup.py`，腳本只是把參數填好、把錯誤判斷寫清楚。
@@ -24,12 +25,13 @@
 在 GX10 上：
 
 ```bash
-# 1. 下載三支程式
+# 1. 下載五支程式
 curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-install.sh
 curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-smoke.sh
 curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ple.py
+curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ttft.py
 curl -O https://kilroy-utb.github.io/hub/files/gx10-free-mem.sh
-chmod +x gx10-strata-*.sh gx10-patch-ple.py
+chmod +x gx10-strata-*.sh gx10-patch-ple.py gx10-patch-ttft.py
 
 # 2. 先只做環境檢查（不動任何東西）
 bash gx10-strata-install.sh --only 0
@@ -231,6 +233,40 @@ nvidia-smi | sed -n '/Processes:/,$p'
 
 實測案例（MemAvailable 只有 68.7 / 128 GiB）：`ollama/llama-server` 佔 33,244 MiB、
 某個 python 推論服務佔 6,977 MiB，兩者合計就是那 59 GiB 的落差來源。
+
+---
+
+## 五、`gx10-patch-ttft.py`（降低首字等待）
+
+安裝完建議跑一次。它把「讓 agent 續接對話時只讀增量」的引擎參數寫進設定檔。
+
+**為什麼需要**：coding agent 每輪都要重送整段對話歷史。沒有對話快取時，
+官方社群實測會「重讀約 90% 的 prompt」；128K context 冷啟動時，
+第一個字要等 **80–90 秒**。
+
+```bash
+# 設定檔路徑依你的機型調整
+python3 gx10-patch-ttft.py /home/kilroy/Strata/strata-iq3_s.json
+
+# 套用後重新啟動服務
+systemctl restart strata   # 或 cd /home/kilroy/Strata && ./run-iq3_s.sh
+```
+
+| 參數 | 作用 | 記憶體 |
+|---|---|---|
+| `--prefill auto:32768` | 長 prompt 分塊讀取，社群實測快 21–35%（RAM ≥ 96 GB，GX10 有 128 GB） | 借用 expert cache |
+| `--prompt-cache-spread` | checkpoint 分散保存，agent 改寫舊 history 仍能命中 | 同一份預算 |
+| `--conversation-cache-mib 8192` | 保留每個 client 的對話 | 主機 RAM 8 GiB |
+| `--conversation-cache-slots 4` | 最多 4 個對話同時保留 | — |
+| `STRATA_CACHE_MESSAGE_BOUNDARY=1` | 改寫最後一段訊息時保留上一輪邊界 | — |
+
+**安全設計**：
+
+- 先跑一次引擎的 `--help`，確認這個版本真的支援該參數才加入，不支援的會略過
+- 改之前自動備份成 `strata-iq3_s.json.bak-ttft`
+- 引擎若回報不認得某個選項，`cp` 備份回來即可
+
+⚠ **手動加的引擎參數，之後重跑 `setup.py` 會被清掉**，重跑後要再套一次。
 
 ---
 

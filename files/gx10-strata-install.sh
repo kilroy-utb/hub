@@ -26,7 +26,7 @@
 set -uo pipefail
 
 # 腳本版本：改了內容請一併 bump，現場對版本時看這行
-SCRIPT_VERSION="2026-10-27.5"
+SCRIPT_VERSION="2026-11-05.1"
 
 # ---------------------------------------------------------------- 設定值
 STRATA_DIR="${STRATA_DIR:-$HOME/Strata}"
@@ -307,17 +307,27 @@ step5_config() {
   [ -f "$CFG" ] || die "找不到設定檔 $CFG"
   if [ "$PLE_RAM" != "1" ]; then
     warn "步驟 0 判定記憶體不夠，不加 --ple-io ram（PLE 留在 SSD）"
-    info "設定檔：$CFG"
-    step_end
-    return 0
-  fi
-  local helper="$STRATA_DIR/gx10-patch-ple.py"
-  if [ -f "$helper" ]; then
-    python3 "$helper" "$CFG" || warn "設定調整失敗，可手動處理"
-  elif [ -f "$SCRIPT_DIR/gx10-patch-ple.py" ]; then
-    python3 "$SCRIPT_DIR/gx10-patch-ple.py" "$CFG" || warn "設定調整失敗，可手動處理"
   else
-    warn "找不到 gx10-patch-ple.py，跳過 --ple-io ram（prompt 會慢 9–18%）"
+    local helper="$STRATA_DIR/gx10-patch-ple.py"
+    if [ -f "$helper" ]; then
+      python3 "$helper" "$CFG" || warn "設定調整失敗，可手動處理"
+    elif [ -f "$SCRIPT_DIR/gx10-patch-ple.py" ]; then
+      python3 "$SCRIPT_DIR/gx10-patch-ple.py" "$CFG" || warn "設定調整失敗，可手動處理"
+    else
+      warn "找不到 gx10-patch-ple.py，跳過 --ple-io ram（prompt 會慢 9–18%）"
+    fi
+  fi
+
+  # TTFT 優化：讓 agent 續接對話時只讀 checkpoint 之後的增量
+  local ttft_helper="$STRATA_DIR/gx10-patch-ttft.py"
+  if [ ! -f "$ttft_helper" ]; then
+    ttft_helper="$SCRIPT_DIR/gx10-patch-ttft.py"
+  fi
+  if [ -f "$ttft_helper" ]; then
+    python3 "$ttft_helper" "$CFG" || warn "TTFT 參數套用失敗，可手動處理（不影響服務啟動）"
+  else
+    warn "找不到 gx10-patch-ttft.py，跳過 TTFT 優化（長對話會重讀約 90% 的 prompt）"
+    info "  curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ttft.py"
   fi
   info "設定檔：$CFG"
   step_end

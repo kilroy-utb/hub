@@ -142,6 +142,57 @@ TTFT（time to first token）則是按下送出到第一個字出來的總等待
 5. **decode 才是「讀回覆」的速度**：短聊天 68–79 tok/s，
    一般人的閱讀速度約 5–7 tok/s，decode 在多數情況下早就過剩。
 
+### 4.1.2 128K context 的 TTFT 會是多少？
+
+答案看**有沒有命中 checkpoint**，兩種情況差一個數量級。
+
+**情況 A：冷啟動（沒命中，整段重讀）**
+
+| 情境 | 總 tokens | prefill 速率 | TTFT |
+|---|---|---|---|
+| 128K ctx + 2K 新 prompt（`--prefill auto`） | 133,120 | ~1,548 tok/s | **約 86 秒** |
+| 同上 + `--prefill auto:32768`（RAM ≥ 96 GB，社群實測 +21–35%） | 133,120 | ~1,873–2,090 tok/s | **約 64–71 秒** |
+| 128K ctx + 8K 新 prompt | 139,264 | ~1,548 tok/s | 約 90 秒 |
+| （對照）262K ctx + 2K 新 prompt | 266,240 | ~1,548 tok/s | 約 172 秒 |
+
+→ 128K 開著又每輪重讀，coding agent 每輪要等 **1.5 分鐘**才看得到第一個字。
+
+**情況 B：熱接續（命中 checkpoint，只讀增量）**
+
+Strata 引擎預設就會在 RAM 保留 checkpoint（每輪開頭 + 每 16K prompt tokens，最多 6 個），
+同一個對話繼續下去時只讀 checkpoint 之後的部分。
+
+| 情境 | 要讀多少 | 官方實測 |
+|---|---|---|
+| 續接上一輪（新增 1–2K token） | 1–2K token | 約 1–2 秒 |
+| 開 `--prompt-cache-spread`，agent 改寫數千 token 前的 history | 從較早的 checkpoint 接 | 82,593-token 對話：**10.2 s**（不開則完整重讀 40.0 s） |
+| 多個 agent / client 同時在跑 | 需 `--conversation-cache-mib 8192` | 不開的話社群實測「重讀約 90% 的 prompt」 |
+| 只改寫最後一段訊息 | 需 `STRATA_CACHE_MESSAGE_BOUNDARY=1` | 前綴 ≥ 8,192 token、尾巴 ≤ 1,024 時可用 |
+
+⚠ 上表的 10.2 s / 40.0 s 是 **2× CMP 50HX（layer split、IQ3_XXS）** 的數據，不是 GB10；
+可借用的是**比例**（約 4 倍），絕對值要在 GX10 實測。
+
+#### 所以 128K 值不值得開？
+
+| 用法 | 建議 |
+|---|---|
+| 日常 coding agent（對話會累積） | **64K**。能力用不太到，但每輪 TTFT 直接砍半 |
+| 要讀整份大 repo / 長文件 | 128K–262K，但**必須搭配 conversation cache**，否則每輪等 1.5 分鐘 |
+| 單次性長文件問答（不續接） | 開到 262K 沒問題，反正只讀一次 |
+
+→ **關鍵不是 context 多大，而是有沒有開 cache。**
+開了 cache，續接的 TTFT 只跟「本輪新增多少 token」有關，跟總 context 幾乎無關。
+
+#### 對應的引擎參數（由 `gx10-patch-ttft.py` 自動套用並先驗證支援）
+
+| 參數 | 作用 | 記憶體 |
+|---|---|---|
+| `--prefill auto:32768` | 長 prompt 分塊讀取，社群實測快 21–35%（需 RAM ≥ 96 GB，GX10 有 128 GB） | 借用 expert cache 的空間 |
+| `--prompt-cache-spread` | checkpoint 由新到舊分散保存，agent 改寫舊 history 仍能命中 | 同一份 checkpoint 預算 |
+| `--conversation-cache-mib 8192` | 保留每個 client 的對話快取 | 主機 RAM 8 GiB |
+| `--conversation-cache-slots 4` | 最多同時保留 4 個對話 | — |
+| `STRATA_CACHE_MESSAGE_BOUNDARY=1` | 改寫最後一段訊息時保留上一輪邊界 | — |
+
 ### 4.2 同機對照
 
 | 方案 | Decode |

@@ -360,6 +360,8 @@ llama-benchy --model <gguf-path> --ctx 131072 --no-cache -n 128
 | prefill（8K prompt + 64K 既有 ctx） | 1,548 tok/s | ≥ 1,200 tok/s |
 | **TTFT（2K prompt、無既有 ctx）** | 2.18 s | **≤ 3 s** |
 | **TTFT（8K prompt + 64K 既有 ctx）** | 47.8 s | **≤ 60 s** |
+| TTFT（128K ctx 冷啟動 + 2K prompt） | 約 86 s（開 `--prefill auto:32768` 後約 64–71 s） | 參考值，非門檻 |
+| TTFT（續接命中對話快取） | 他機實測 10.2 s vs 完整重讀 40.0 s | 應明顯低於完整重讀 |
 | MTP 接受率 | 60/79、13/14 | > 50% |
 | 記憶體峰值 | — | ≤ 115 GB |
 | 長跑 | — | 連續 1 小時 mixed workload 無 OOM |
@@ -417,11 +419,53 @@ PY
 
 - 短 prompt 的 TTFT 應在 **3 秒內**（官方 2.18 s）。
 - 長 prompt 的 TTFT 會隨 prompt 變長而上升（官方 8K prompt + 64K 既有 ctx = 47.8 s）。
+- **128K context 冷啟動約 86 秒**；這是「整段重讀」的結果，不是引擎慢。
 - **若 TTFT 遠高於預期，先確認 `--context` 設定**，再懷疑引擎 ——
   每次請求都要把整段既有 context 重讀一遍，這是 TTFT 的主因（feasibility §4.1.1）。
 - 日常 coding 用 **64K–128K context** 就好；256K 留給真的需要超長文件時再開。
+- **但真正能把 128K 拉到 1–2 秒的是「對話快取」** → 先做 §6.1，再回來量 TTFT。
 
-### 6.1 API 驗證
+### 6.1 降低 TTFT：開對話快取（必做）
+
+**沒有這組參數，coding agent 每輪會重讀約 90% 的 prompt**（官方社群實測），
+128K context 冷啟動時 TTFT 會到 80–90 秒。
+
+```bash
+# 把 gx10-patch-ttft.py 放到 /home/kilroy/Strata/ 或同一個目錄
+curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ttft.py
+python3 gx10-patch-ttft.py /home/kilroy/Strata/strata-iq3_s.json
+```
+
+這個腳本會先跑一次引擎的 `--help`，確認該版本真的支援才加入參數，並先備份設定檔。
+
+| 參數 | 作用 | 記憶體 |
+|---|---|---|
+| `--prefill auto:32768` | 長 prompt 分塊讀取，社群實測快 21–35%（RAM ≥ 96 GB，GX10 有 128 GB） | 借用 expert cache |
+| `--prompt-cache-spread` | checkpoint 分散保存，agent 改寫舊 history 仍能命中 | 同一份預算 |
+| `--conversation-cache-mib 8192` | 保留每個 client 的對話 | 主機 RAM 8 GiB |
+| `--conversation-cache-slots 4` | 最多 4 個對話同時保留 | — |
+| `STRATA_CACHE_MESSAGE_BOUNDARY=1` | 改寫最後一段訊息時保留上一輪邊界 | — |
+
+套用後**重新啟動服務**才會生效（`systemctl restart strata` 或 `./run-iq3_s.sh`）。
+
+⚠ **若引擎回報不認得某個選項**，把備份改回來：
+
+```bash
+cp /home/kilroy/Strata/strata-iq3_s.json.bak-ttft /home/kilroy/Strata/strata-iq3_s.json
+```
+
+⚠ **手動加的引擎參數，之後重跑 `setup.py` 會被清掉**（setup 只保留它自己寫的鍵）。
+重跑 setup 後要再套一次這個腳本。
+
+**驗證有沒有真的命中快取**（看引擎日誌）：
+
+```bash
+grep -iE "conversation cache|checkpoint|resume|reused|prompt .* read in" run-iq3_s.log | tail -20
+```
+
+連續送兩次相同開頭的請求（第二次多一句話），第二次的 `prompt ... read in` 應該明顯短於第一次。
+
+### 6.2 API 驗證
 
 ```bash
 curl http://127.0.0.1:8080/v1/chat/completions \
