@@ -69,11 +69,78 @@ v0.2.6 的 Linux 產物只有 `linux-x86_64`：
 | 指標 | 數值 |
 |---|---|
 | Decode | **58.8 – 66.0 tok/s** |
-| 短 prompt 處理 | 103 – 111 tok/s |
+| 短 prompt 讀取（prefill，256K ctx） | 103 – 111 tok/s |
 | 127K 長 prompt prefill | **1512 tok/s**（needle-in-haystack 正確召回） |
 | 長 prompt 期間 decode | 57.4 tok/s |
 | MTP 接受率 | 13/14、60/79 |
 | 記憶體 | UD-Q4_K_XL 的 expert cache 全常駐時 71.7 GiB；IQ2_XS 時 33.0 GiB |
+
+### 4.1.1 Prefill 與 TTFT（真正決定 coding agent 體感的數字）
+
+Decode 是「把答案念出來」的速度，Prefill 是「把你送進去的東西讀完」的速度，
+TTFT（time to first token）則是按下送出到第一個字出來的總等待。
+
+**對 coding agent 來說，每一輪都要重送整個對話歷史** → 每輪的固定成本是
+「既有 context + 新 prompt」要重新讀一遍，而不是把答案念多快。
+
+#### 官方完整 prefill 數據（IQ2_XS @ 128K ctx、`--kv int8`）
+
+來源：DGX Spark，llama-benchy 0.4.0、`--no-cache`、單請求、每輪寫 128 tokens、3 次取平均。
+
+| Prompt | 既有 context | 總 tokens（ctx + prompt） | Prefill | Decode | MTP 接受率 |
+|---|---|---|---|---|---|
+| 2K | 0 | 2,049 | 957 tok/s | 55.7 tok/s | 72% |
+| 8K | 0 | 8,194 | 1,357 tok/s | 59.7 tok/s | 74% |
+| 2K | 16K | 18,433 | 1,410 tok/s | 63.7 tok/s | 73% |
+| 8K | 16K | 24,577 | 1,503 tok/s | 57.3 tok/s | 80% |
+| 2K | 64K | 67,586 | 1,538 tok/s | 56.2 tok/s | 77% |
+| 8K | 64K | 73,729 | **1,548 tok/s** | 56.4 tok/s | 75% |
+
+短聊天回覆的 decode 可達 **68–79 tok/s**。
+
+#### 同一組實驗的 TTFT
+
+| 場景 | 算式（總 tokens ÷ prefill 速率） | 官方實測 TTFT |
+|---|---|---|
+| 2K prompt，無既有 ctx | 2,049 ÷ 957 | **2.18 s** |
+| 8K prompt，無既有 ctx | 8,194 ÷ 1,357 | **6.11 s** |
+| 8K prompt，已有 64K ctx | 73,729 ÷ 1,548 | **47.8 s** |
+
+> ⚠ **測量陷阱**：`llama-benchy` 的 `pp` 欄位量不到 Strata 的 prefill。
+> Strata 在讀完 prompt 之前就先送出 stream 的第一個 chunk，所以 benchy 的「首包時間」只有幾毫秒，
+> 要看「第一個 token 的時間」才準。
+
+#### UD-Q4_K_XL @ 262K ctx（同一台 Spark）
+
+| Prompt | 既有 context | 總 tokens | Prefill | Decode |
+|---|---|---|---|---|
+| 2K | 0 | 2,049 | 590 tok/s | 38.4 tok/s |
+| 8K | 0 | 8,193 | 1,117 tok/s | 39.2 tok/s |
+| 2K | 16K | 18,433 | 1,058 tok/s | 41.8 tok/s |
+| 8K | 16K | 24,577 | 1,173 tok/s | 39.7 tok/s |
+| 2K | 64K | 67,585 | 1,165 tok/s | 39.4 tok/s |
+| 8K | 64K | 73,729 | **1,187 tok/s** | 41.5 tok/s |
+
+→ 量化越大（權重越重）→ prefill 與 decode 都變慢：UD-Q4_K_XL 的 TTFT 對照
+2K/無ctx = 3.47 s、8K/64K ctx = **62.1 s**。
+
+#### IQ3_S @ 256K ctx（我們要用的組合）
+
+- 短 request 的 prompt 讀取速率：**103–111 tok/s**（prompt 本身很短，實際等待仍在 1 秒內）
+- 127K 長 prompt prefill：**1512 tok/s**，needle-in-haystack 正確召回，期間 decode 57.4 tok/s
+- ⚠ 這組數字**不能**與上面的 IQ2_XS 直接比較：量化格式、ctx（256K vs 128K）、`--parallel 4` 都不同。
+
+#### 關鍵洞見：瓶頸不是 prefill 速率，是「要重讀的 token 總數」
+
+1. **prefill 核心很快**（900–1,550 tok/s），不是瓶頸。
+2. **真正的成本是「既有 context + 新 prompt」要整段重讀**：
+   ctx 開著 64K、只送 2K prompt → 67,586 tokens 要讀 → 至少 44 秒起跳（實際 47.8 s）。
+3. **coding agent 的 history 會線性累加**：對話越長，每輪 TTFT 越長。
+   → 實務作法：開新對話、把舊歷史摘要後帶入、或日常用較小的 `--context`。
+4. **日常 coding 用 64K–128K 綽綽有餘**，256K 留給真的需要超長文件時再開；
+   `--context` 是 TTFT 最大的可調旋鈕，影響大於換量化。
+5. **decode 才是「讀回覆」的速度**：短聊天 68–79 tok/s，
+   一般人的閱讀速度約 5–7 tok/s，decode 在多數情況下早就過剩。
 
 ### 4.2 同機對照
 
@@ -161,7 +228,7 @@ if disk:                          # ← 只有機械式硬碟才會走這段
 | IQ2_XS | ✅ 已驗證（完整 benchmark 表，128K ctx） | 55.7–63.7 | 次之 | 48 GB | 33.0 GiB | 68.0 GB | 🥈 備援（省記憶體時） |
 | UD-IQ4_XS | ❌ 未在 Spark 跑過 | 估 38–45 | 高（93.09%） | 48 GB | 59.5 GB | 93.7 GB | 🥉 有餘裕可再試 |
 | UD-Q4_K_XL | ✅ 已驗證（262K ctx） | 38.4–41.5 | 高（近 4-bit） | 48 GB | 71.7 GiB | 111.3 GB | ⚠️ 慢 3–4 成，且 PLE 在 SSD |
-| IQ3_XXS | ❌ 未驗證 | 估 45–55 | 中 | 60 GB | 42.9 GB | 75.8 GB | ⚠️ 品質不如 IQ3_S |
+| IQ3_XXS | ❌ 未驗證 | 估 50–60 | 中（84.46% / KL 0.202） | 60 GB | 42.9 GB | 75.8 GB | ⚠️ 品質不如 IQ3_S |
 | IQ1_M（Coder 專用） | ❌ 未驗證 | 估 45–55 | 無公開 benchmark | 32 GB | 23.4 GB | 58.4 GB | ⚠️ 最省但要另外驗證品質 |
 | Q2_0 | ⚠️ pack 為 x86-only | 最快 | 低（80.60%） | 48 GB | 34.0 GB | 66.4 GB | ❌ 品質跌幅太大 |
 | UD-Q5/Q6_K_XL、Q8_0 | ❌ | — | 最高 | 108–136 GB | 98–128 GB | 158–188 GB | ❌ **記憶體不夠** |
@@ -170,9 +237,28 @@ if disk:                          # ← 只有機械式硬碟才會走這段
 
 1. **它是唯一被真機完整驗證過「完整 125B」的量化**，而 IQ3_S 正是 setup.py 唯一標註
    「matches the full model on the published benchmarks」的一級。
+   上游自己的選擇也是它：`setup.py` 的 `RECOMMENDED_SIZES = {"qwen": ("IQ3_S",), ...}`。
 2. **速度最快**：58.8–66.0 tok/s，且在 256K context、4 併發下量測（IQ2_XS 的數字是 128K／單請求）。
 3. **記憶體夠**：62 GB 常駐 + 50.3 GB arena，峰值 ~78–84 GB，128 GB 還剩 40+ GB 可留給 PLE、KV 與其他程式。
 4. **品質最高**：相較 UD-Q4_K_XL（38–41 tok/s）快 1.5 倍，品質差距只在 87.69% vs 93.09% 這個量級。
+
+### 5.4.1 IQ3_S vs IQ3_XXS 差在哪（官方 docs/QUANTS.md 實測）
+
+| | **IQ3_S**（採用） | IQ3_XXS |
+|---|---|---|
+| 位元寬 | 3.5-bit i-quant | 3-bit i-quant |
+| 與 Q8_0 同 token 的比例 | **87.69%** | 84.46% |
+| 平均 KL（越低越好） | **0.144** | 0.202 |
+| Perplexity（Q8_0 = 4.052） | **4.097** | 4.119 |
+| 下載量 | 83.6 GB | 75.8 GB |
+| 常駐 RAM | 62 GB | 60 GB |
+| expert arena | 50.3 GB | 42.9 GB |
+| GB10 真機驗證 | ✅ 58.8–66.0 tok/s | ❌ 未在 Spark 跑過 |
+
+→ **記憶體只差 2 GB，品質差 3.2 個百分點** —— 沒有為了省記憶體而降級的理由。
+→ 在 GB10 上 IQ3_S 還比 4-bit 的 UD-Q4_K_XL **快 1.5 倍**（58.8–66 vs 38.4–41.5），
+   品質差距只有 87.69% vs 93.09%。速度與品質在這台機器上同時勝出。
+→ 命名規則：XXS = extra extra small（最小最快）、S = small（最大最好）。
 
 **避坑重點（來源：DGX_SPARK.md 的 CPU fallback 實測）**
 
@@ -213,9 +299,11 @@ if disk:                          # ← 只有機械式硬碟才會走這段
 5. **Smoke test（關鍵閘門）**：以 `--expert-cache auto --mmap-experts --no-pool --max-context 4096` 起服務，送一個 20-token 請求 → **確認不再出現 error 77**。若崩潰，立即切換分支或改用 IQ2_XS 重試（記錄是哪個組合）。
 6. **常駐確認（第二道閘門）**：確認日誌顯示 **24,576 個 experts 全部在 GPU cache**、CPU 閒置（不是 2,048 slots 的 fallback 模式），否則速度會直接掉到 20 tok/s 上下。
 7. **效能驗證**：IQ3_S，256K context、`--kv int8`、`--parallel 4`、`--ple-io ram`，量 decode / prefill / MTP 接受率，對照 §4.1 的 58.8–66 tok/s。
-8. **長上下文驗證**：127K needle-in-haystack（官方實測 1512 tok/s prefill）。
-9. **API 層驗證**：OpenAI 相容 `/v1/chat/completions` + Anthropic 相容端點，接 Claude Code / Codex CLI 實測。
-10. **常駐化**：systemd 或 Docker（`--restart unless-stopped`、`--ulimit memlock=-1`）。
+8. **長上下文驗證**：127K needle-in-haystack（官方實測 1512 tok/s prefill），**同時記錄 TTFT**（見 §4.1.1）。
+9. **TTFT 驗證**：分別在「無既有 ctx」「64K 既有 ctx」兩種狀況下量到第一個 token 的時間，
+   確認落在 §8 的門檻（≤ 3 s / ≤ 60 s）；若超標，先確認是 `--context` 設定而非引擎問題。
+10. **API 層驗證**：OpenAI 相容 `/v1/chat/completions` + Anthropic 相容端點，接 Claude Code / Codex CLI 實測。
+11. **常駐化**：systemd 或 Docker（`--restart unless-stopped`、`--ulimit memlock=-1`）。
 
 ---
 
@@ -226,7 +314,10 @@ if disk:                          # ← 只有機械式硬碟才會走這段
 | 模型載入 | IQ3_S 載入成功，無 verify 崩潰（error 77） |
 | Expert 常駐 | 日誌顯示 **24,576 / 24,576 experts 在 GPU**，CPU 不計算 expert |
 | Decode（單請求） | ≥ 45 tok/s（官方實測 58.8–66 的下限折讓） |
-| Prefill | ≥ 800 tok/s（127K 長 prompt） |
+| Prefill（127K 長 prompt） | ≥ 800 tok/s（官方 1512） |
+| Prefill（8K prompt + 64K 既有 ctx） | ≥ 1,200 tok/s（官方 1,548） |
+| **TTFT（2K prompt、無既有 ctx）** | ≤ 3 s（官方 2.18 s） |
+| **TTFT（8K prompt + 64K 既有 ctx）** | ≤ 60 s（官方 47.8 s） |
 | 記憶體峰值 | ≤ 115 GB（含 `--ple-io ram` 時）；不含則 ≤ 90 GB |
 | 長跑 | 連續 1 小時 mixed workload 無 OOM / 無引擎重啟 |
 | API | OpenAI 相容 + Anthropic 相容端點皆可用 |
@@ -436,6 +527,7 @@ GB10 的 LPDDR5X 只有 273 GB/s。125B 是 6B active 的 MoE，每個 token 只
 | 單次問答、讀一段回覆 | 31 → 60 tok/s | ❌ 英文閱讀速度約 5–7 tok/s，31 tok/s 早就過剩 |
 | **Agentic coding**（實測平均 4,429 output tokens / task） | 每 task 從 ~2.4 分鐘 → ~1.2 分鐘 | ✅ **有意義**，長 session 累積明顯 |
 | 長 prompt prefill（32K） | llama.cpp 600–2,333 tok/s vs Strata 1,512 tok/s | ❌ 沒有優勢，llama.cpp 可能更快 |
+| **TTFT（8K prompt + 64K 既有 ctx）** | Strata IQ2_XS 47.8 s / UD-Q4_K_XL 62.1 s | ❌ 這是 coding agent 的真正痛點，且**與引擎無關**，取決於 `--context` 設定 |
 | 多人並行 / 服務化 | llama.cpp 受限於 `--parallel 1`（見 §12.5） | ✅ Strata 支援 `--parallel 4` |
 | 長 context（256K+）、視覺 | SGLang fork 支援 524K + vision | ❌ Strata IQ3_S 只有 256K |
 

@@ -12,7 +12,7 @@
 | 量化 | **IQ3_S**（官方 `ram_gb` = 62 GB，峰值 ~78–84 GB；唯一在真實 Spark 驗證過的完整 125B 量化） |
 | 常駐策略 | 只常駐 125B，27B 先放磁碟 |
 | 本階段目標 | 分支能編譯 → 模型能載入 → verify 階段不崩 → 能出 token |
-| 官方實測基準 | decode **58.8–66.0 tok/s**，127K prefill **1512 tok/s**（DGX Spark，同款 GB10） |
+| 官方實測基準 | decode **58.8–66.0 tok/s**，prefill 957–1,548 tok/s（IQ2_XS）/ 127K 時 **1512 tok/s**（IQ3_S），TTFT 2.18 s（2K）→ 47.8 s（8K + 64K ctx）（DGX Spark，同款 GB10，詳見 feasibility §4.1.1） |
 
 > 為什麼先 smoke test：GitHub issue **#3525** 至今未關閉（0 則回覆），GB10 上 verify 階段會 `illegal memory access was encountered`（CUDA error 77），
 > 在 main v0.1.46.1 與多個社群分支、用 Q2_0 + `--mmap-experts` 都能重現。**崩潰與否跟「分支 × 量化」組合有關**，所以必須現場驗。
@@ -357,10 +357,69 @@ llama-benchy --model <gguf-path> --ctx 131072 --no-cache -n 128
 | decode（短 prompt） | 58.8–66.0 tok/s | **≥ 45 tok/s** |
 | decode（128K context） | 57.4 tok/s | ≥ 45 tok/s |
 | prefill（127K prompt） | 1512 tok/s | ≥ 800 tok/s |
+| prefill（8K prompt + 64K 既有 ctx） | 1,548 tok/s | ≥ 1,200 tok/s |
+| **TTFT（2K prompt、無既有 ctx）** | 2.18 s | **≤ 3 s** |
+| **TTFT（8K prompt + 64K 既有 ctx）** | 47.8 s | **≤ 60 s** |
 | MTP 接受率 | 60/79、13/14 | > 50% |
 | 記憶體峰值 | — | ≤ 115 GB |
 | 長跑 | — | 連續 1 小時 mixed workload 無 OOM |
 | API | OpenAI + Anthropic 相容 | 兩種端點皆可用 |
+
+### 6.0 量 prefill 與 TTFT（必做）
+
+> ⚠ **量 TTFT 要等到「第一個有內容的 token」**，不是等到第一個 chunk。
+> Strata 在讀完 prompt 之前就先送 stream 的第一個 chunk，用第一個 chunk 會量到幾毫秒的假數字。
+
+**從引擎日誌直接讀 prefill / decode 速率**（Strata 伺服器自己會印）：
+
+```bash
+grep -E "prompt .* read in .* generated in" run-iq3_s.log | tail -20
+```
+
+**量 TTFT：**
+
+```bash
+python3 - <<'PY'
+import json, time, urllib.request
+
+def ttft(prompt, label):
+    payload = {"model": "local", "stream": True, "max_tokens": 32,
+               "messages": [{"role": "user", "content": prompt}]}
+    req = urllib.request.Request(
+        "http://127.0.0.1:8080/v1/chat/completions",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"})
+    t0 = time.time()
+    with urllib.request.urlopen(req, timeout=900) as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "ignore").strip()
+            if not line.startswith("data:"):
+                continue
+            body = line[5:].strip()
+            if not body or body == "[DONE]":
+                continue
+            data = json.loads(body)
+            content = (data.get("choices") or [{}])[0].get("delta", {}).get("content")
+            if content:
+                print(f"{label}: TTFT = {time.time() - t0:.2f} s")
+                return
+    print(f"{label}: 沒有收到內容 token")
+
+ttft("寫一個 Python 快速排序", "短 prompt (約 20 tok)")
+
+# 同一台機器、同一個量化，只改 context 大小 → 看 TTFT 差多少
+filler = ("The quick brown fox jumps over the lazy dog. " * 6000)  # 約 270K 字元 ≈ 63K tok
+ttft(filler + "\n\n以上是雜訊。請只回答：OK", "長 prompt (約 63K tok)")
+PY
+```
+
+**判讀：**
+
+- 短 prompt 的 TTFT 應在 **3 秒內**（官方 2.18 s）。
+- 長 prompt 的 TTFT 會隨 prompt 變長而上升（官方 8K prompt + 64K 既有 ctx = 47.8 s）。
+- **若 TTFT 遠高於預期，先確認 `--context` 設定**，再懷疑引擎 ——
+  每次請求都要把整段既有 context 重讀一遍，這是 TTFT 的主因（feasibility §4.1.1）。
+- 日常 coding 用 **64K–128K context** 就好；256K 留給真的需要超長文件時再開。
 
 ### 6.1 API 驗證
 
