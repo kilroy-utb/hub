@@ -74,6 +74,14 @@ sections:
     badge_source:
       local: "wiki/agent-workflow"
 
+  - title: "2026 期中選舉 × 馬斯克"
+    icon: "🗳️"
+    desc: "民主黨兩院過半對 Elon Musk 的淨影響研究報告（192 條發現／459 個來源，層 A／層 B 分離）"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/us-midterm-musk-impact/"
+    badge_source:
+      local: "wiki/us-midterm-musk-impact"
+
   - title: "AI 技術統整"
     icon: "🤖"
     desc: "模型進展、Local LLM、Agent 與 Skill 生態"
