@@ -543,6 +543,63 @@ Strata 的 `setup.py` 除了主模型，還提供 **Coder 版**（對應 `ISTA-D
 
 ---
 
+### 11.8 Cache 對照：模型選型的第二個維度（2026-11-05 補）
+
+前面的比較只用了「能力分數」與「tok/s」，漏掉了 **cache** 這個維度。
+但 cache 同時影響兩件事：**記憶體能不能裝得下**，以及 **每一輪要等多久**。
+
+#### 先分清楚三種容易混的 cache
+
+| 名稱 | 作用 | 誰決定 | 影響 |
+|---|---|---|---|
+| **KV cache** | 「讀過的內容」的暫存 | **模型架構** + KV 精度設定 | context 越大越吃 RAM |
+| **Prompt cache / checkpoint** | 跨請求重用同一段 prompt 的 KV | **服務端**（Strata、llama.cpp 都有） | 續接時不用重讀 → TTFT |
+| **Conversation cache / PLE** | Strata 把多個 client 的對話停在 RAM 裡切換 | **服務端** | 多 agent 並行時的命中率 |
+
+→ **模型選型主要被第一種綁住，體感受第二、三種決定。**
+
+#### KV cache 大小對照（每個 context token）
+
+| 模型 | 架構 | KV / token（fp16） | 128K ctx 的 KV |
+|---|---|---|---|
+| **125B Flash-Next**（Strata 路徑） | 10 個 attention 層 + MTP，2 KV head × 256 | **約 13.7 KB**（官方 DETAILS.md） | 約 1.7 GB（fp16）／**約 0.9 GB（int8）** |
+| Qwen3-Coder-30B-A3B | 48 層 × 4 KV head × 128 | 約 96 KB（一般 Qwen3 GQA 架構，需實測確認） | 約 12.6 GB（fp16）／6.3 GB（q8） |
+| Qwen3.8-27B（dense） | 層數更多、每 token 激活全量 | 比 30B 更大（需實測確認） | 估計 12–17 GB |
+
+→ **這是 125B 在 128GB 上的隱藏優勢**：它的 KV cache 每 token 便宜一個數量級，
+所以 128K–256K context 幾乎不花 RAM；30B／27B 在同樣 context 下 KV 就吃掉 6–17 GB。
+
+#### 跨請求重用的支援
+
+| | 125B + Strata | 30B Coder + Ollama/llama.cpp | 27B + llama.cpp |
+|---|---|---|---|
+| 續接重用 | checkpoint（**預設開**：每輪開頭 + 每 16K tokens，最多 6 個，每個約 118 MB） | llama.cpp 內建 prompt cache | llama.cpp 內建 prompt cache |
+| 多 client 保留 | `--conversation-cache-mib 8192`（**預設關，需手動開**） | 無（以單一 session 為主） | 無 |
+| agent 改寫舊 history | `--prompt-cache-spread` / `STRATA_CACHE_MESSAGE_BOUNDARY=1` | 有 prompt cache | 有 prompt cache |
+| 續接命中後 TTFT | **約 1–2 秒** | 約 1–2 秒 | 約 1–2 秒 |
+
+#### 重算結論：加了 cache 軸，125B 的結論反而更強
+
+1. **TTFT 這個維度被 cache 拉平了**：三者續接命中後都是 1–2 秒，
+   所以「cache 有沒有開好」比「模型大小」更決定體感。
+2. **差距回到能力**：125B Coding 73.1 vs 30B Coder 13.3（IQ3_S 量化後約 66），
+   這是 5 倍差距，遠大於任何延遲差距。
+3. **唯一會翻盤的場景是「長 context + 多 client 並行」**：
+   30B／27B 的 KV cache 大一個數量級，每個併發 slot 都要留一份 KV，
+   在 128GB 上會跟模型搶記憶體；Strata 的 int8 KV + conversation cache 在這點有結構性優勢。
+4. **不要用「兩個都開著」來比較**：125B IQ3_S 已佔 ~78–84 GB，
+   30B 再加 ~19 GB + KV 就爆了 128GB。比較必須是「同一時間只跑一個」。
+
+#### 所以在討論模型時應該一併看的三個數字
+
+| 數字 | 怎麼取得 | 門檻 |
+|---|---|---|
+| 每輪 TTFT（續接命中） | runbook §6.0 的量測腳本 | ≤ 3 s |
+| KV cache 佔用 | 服務啟動後看 `free -g` 的差值 | 128K ctx 時 ≤ 2 GB（int8） |
+| 每輪總時間 | TTFT +（輸出 tokens ÷ decode 速率） | 與另一個模型同條件 A/B |
+
+---
+
 ## 12. Strata 對 GX10 到底值不值（2026-10-27 誠實評估）
 
 ### 12.1 關鍵前提：你的 GX10 就是 DGX Spark
