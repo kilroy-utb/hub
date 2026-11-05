@@ -242,6 +242,9 @@ nvidia-smi | sed -n '/Processes:/,$p'
 | Expert 常駐 | 24,576 / 24,576 在 GPU，CPU 不計算 expert |
 | Decode（單請求） | ≥ 45 tok/s |
 | Prefill（127K prompt） | ≥ 800 tok/s |
+| Prefill（8K prompt + 64K 既有 ctx） | ≥ 1,200 tok/s（官方 1,548） |
+| **TTFT（2K prompt、無既有 ctx）** | ≤ 3 s（官方 2.18 s） |
+| **TTFT（8K prompt + 64K 既有 ctx）** | ≤ 60 s（官方 47.8 s） |
 | 記憶體峰值 | ≤ 115 GB（含 `--ple-io ram` 時） |
 | 長跑 | 連續 1 小時 mixed workload 無 OOM、無引擎重啟 |
 | API | OpenAI 相容 + Anthropic 相容端點皆可用 |
