@@ -85,6 +85,90 @@ python3 gx10-bench.py --only code,zh       # 只跑指定案例
 | `longctx` | 壓力 | 長 prompt 的 prefill 速度 |
 | `cache` | 壓力 | 同一 prompt 送兩次，看快取有沒有命中 |
 
+### 測試條件（實際送出的 prompt）
+
+所有案例都用 `reasoning_effort: none`（關閉思考模式），streaming 送出。
+
+| 案例 | 實際 prompt | max_tokens | 檢查代碼 |
+|---|---|---|---|
+| `ttft` | 用一句話說明什麼是遞迴。 | 64 | `nonempty` |
+| `decode` | 詳細說明 Python 的 GIL 是什麼，以及它對多執行緒程的影響。 | 512 | `nonempty` |
+| `code` | 用 Python 寫一個函式 `def is_palindrome(s: str) -> bool`，判斷字串是否為回文（忽略大小寫與非字母數字字元）。只回程式碼，不要解釋。 | 512 | `code` |
+| `zh` | 請用繁體中文寫一段 150 字左右，說明台灣的四季氣候特色。 | 512 | `chinese` |
+| `reasoning` | 一隻烏鴉把一隻 5 升的桶裝滿了水，桶上有一個 3 升的桶。請問要怎麼量出恰好 4 升的水？請只列出步驟，不要多作解釋。 | 256 | `steps` |
+| `instruction` | 請只輸出三個以逗號分隔的英文單字，代表顏色，不要任何其他文字。 | 32 | `short` |
+| `longctx` | 同一段內部技術文件重複 40 段（約 4K token）+「請用三個要點總結這份文件的核心內容，並說明 expert 常駐的重要性。」 | 256 | `nonempty` |
+| `cache` | 同一段文件 +「另外請列出三個關於 PLE n-gram 表的技術重點。」 | 256 | `nonempty` |
+
+`cache` 會把**同一個 prompt 送兩次**：第一次是冷啟動，第二次看快取有沒有命中。
+報告裡會多出 `cache_cold_prefill`、`cache_cold_ttft`、`cache_hit_ratio` 三個欄位。
+
+### 品質檢查規則
+
+| 代碼 | 檢查方式 | 通過條件 |
+|---|---|---|
+| `nonempty` | 回應有內容 | 去空白後 ≥ 8 字元 |
+| `code` | 有真的寫出函式 | 正則找到 `def is_palindrome` |
+| `chinese` | 中文字數足夠 | 中文字元 ≥ 40 個 |
+| `steps` | 有列出步驟 | 步驟標記（數字／①-⑩／一-五／`1.`）≥ 2 個 |
+| `short` | 指令遵循 | 長度 ≤ 200 字元，且有逗號 |
+
+### 執行流程
+
+1. **健康檢查** — 打 `GET /health`，不通就直接結束（exit 2）
+2. **暖機** — 先送一個 `你好`（8 token）的請求，這次的 TTFT 記為「冷啟動 TTFT」，
+   後面的數字才彼此可比
+3. **Prefill 校準** — 3 種長度（64 / 1K / 4K token）× 2 輪，每輪開頭塞隨機標記，
+   避免命中前一次的前綴快取
+4. **測試案例** — 依序跑，每個案例記錄 TTFT、prefill、decode、CPU 忙碌度、
+   MemAvailable 最低值
+5. **報告** — 表格 + 總結；`--out` 可存成 JSON 供日後比較
+
+### 完整 CLI 旗標
+
+| 旗標 | 說明 |
+|---|---|
+| `--url` | 服務位置（預設 `http://127.0.0.1:8080`） |
+| `--api-key` | API key（有設就帶 `Authorization` header） |
+| `--model` | 模型名稱（不給會自動查 `/v1/models`） |
+| `--repeat N` | 每個案例重跑 N 次取中位數（預設 1） |
+| `--quick` | 跳過 `longctx` 與 `cache` |
+| `--only a,b` | 只跑指定案例（逗號分隔） |
+| `--no-stream` | 不用串流（量不到真實 TTFT） |
+| `--no-warmup` | 跳過暖機 |
+| `--no-calibrate` | 跳過 prefill 校準（退回固定門檻判定） |
+| `--timeout` | 單次請求逾時秒數（預設 900） |
+| `--out` | 存 JSON 報告 |
+| `--compare` | 跟舊報告比較（看改了設定有沒有變快） |
+| `--ttft` `--prefill` `--decode` `--max-cpu` `--min-mem` | 覆寫各項門檻 |
+
+### 報告 JSON 欄位
+
+```jsonc
+{
+  "when": "2026-11-08 15:04:11",
+  "model": "qwen3.8-flash-next-iq3_s",
+  "cold_start_ttft": 0.274,          // 暖機那次的 TTFT
+  "calibration": {
+    "rate": 1145,                    // 實測 prefill 速率（tok/s）
+    "overhead": 0.28,                // 固定延遲（秒）
+    "points": [[163, 0.42], [2683, 2.61]]   // (token 數, TTFT)
+  },
+  "thresholds": { "ttft": 3, "prefill": 800, "decode": 45, "max_cpu": 20, "min_mem": 10 },
+  "results": [{
+    "id": "cache", "name": "提示快取命中", "group": "壓力",
+    "ttft": 0.28, "prefill_tps": 14209.1, "decode_tps": 57.1,
+    "decode_best": 57.1,
+    "prompt_tokens": 3961, "completion_tokens": 240,
+    "total_s": 12.8, "cpu_busy": 10.5, "mem_min": 39.6,
+    "check": "nonempty", "check_passed": true, "check_note": "有內容",
+    "cache_cold_prefill": 1059.2,    // 同一 prompt 冷跑
+    "cache_hit_ratio": 13.41,        // 快取命中後快幾倍
+    "sample": "……"                    // 回應前 300 字
+  }]
+}
+```
+
 ### 判定門檻
 
 預設跟 `gx10-verify.sh` 對齊，可用 CLI 覆寫：
