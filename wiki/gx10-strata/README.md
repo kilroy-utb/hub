@@ -318,6 +318,33 @@ python3 gx10-bench.py --ttft 3 --prefill 800 --decode 45 --max-cpu 20 --min-mem 
 
 結束碼：`0` 全部通過、`1` 有項目未達門檻、`2` 服務沒起來。
 
+### 為什麼要先做「Prefill 校準」
+
+短 prompt 的 `tokens ÷ TTFT` 量到的是**固定延遲**（HTTP、排程、CUDA graph）而不是
+prefill 速率 —— 20 個 token 的 prompt 花 0.34 秒會顯示成 59 tok/s，但那 0.34 秒
+幾乎跟讀 prompt 沒關係。長 prompt 的 TTFT 又本來就會隨長度成長，不能用固定秒數去卡。
+
+所以 benchmark 會先用 3 種長度（64 / 1K / 4K token）配一條線，把兩者拆開：
+
+```
+TTFT ≈ 固定延遲 + prompt_tokens / prefill_rate
+```
+
+- prefill 門檻用**校準出來的速率**判斷
+- TTFT 上限 = `max(固定門檻, 固定延遲 + prompt_tokens / 速率 × 1.5)`
+- decode 門檻只在輸出 ≥ 64 token 時才判（輸出太短速率不準）
+
+```bash
+python3 gx10-bench.py --no-calibrate   # 跳過校準（退回固定門檻判定）
+```
+
+```
+== Prefill 校準 ==
+  固定延遲（HTTP + 排程 + CUDA graph）：0.321 秒
+  實際 prefill 速率：1199 tok/s（門檻 ≥ 800）
+  樣本：(163 tok, 0.46s) (2683 tok, 2.56s) (10747 tok, 9.28s)
+```
+
 ### 怎麼比較兩次結果
 
 ```bash

@@ -148,6 +148,7 @@ def call_engine(base_url: str, prompt: str, max_tokens: int, api_key: str,
     t0 = time.perf_counter()
     t_first_byte = None
     t_first_token = None
+    t_last_token = None
     text = ""
     usage = {}
     finish_reason = ""
@@ -179,6 +180,8 @@ def call_engine(base_url: str, prompt: str, max_tokens: int, api_key: str,
                     piece = delta.get("content") or ""
                     if piece and t_first_token is None:
                         t_first_token = time.perf_counter()
+                    if piece:
+                        t_last_token = time.perf_counter()
                     text += piece
             else:
                 raw = response.read()
@@ -191,6 +194,7 @@ def call_engine(base_url: str, prompt: str, max_tokens: int, api_key: str,
                     text = message.get("content") or ""
                     finish_reason = choices[0].get("finish_reason") or ""
                 t_first_token = t_first_byte
+                t_last_token = t_first_byte
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:300]
         raise EngineError("HTTP %s：%s" % (exc.code, detail)) from exc
@@ -209,7 +213,9 @@ def call_engine(base_url: str, prompt: str, max_tokens: int, api_key: str,
 
     ttft = (t_first_token - t0) if t_first_token else None
     total = t1 - t0
-    decode_window = (t1 - t_first_token) if t_first_token else total
+    # 解碼時間只算「第一個 token 到最後一個 token」，不含收尾延遲
+    decode_window = ((t_last_token - t_first_token)
+                     if (t_first_token and t_last_token) else total)
     decode_tps = completion_tokens / decode_window if decode_window > 0 else 0.0
     prefill_tps = prompt_tokens / ttft if (ttft and prompt_tokens) else 0.0
 
@@ -220,6 +226,7 @@ def call_engine(base_url: str, prompt: str, max_tokens: int, api_key: str,
         "completion_tokens": completion_tokens,
         "ttft": round(ttft, 3) if ttft else None,
         "total_s": round(total, 3),
+        "decode_window_s": round(decode_window, 3),
         "prefill_tps": round(prefill_tps, 1),
         "decode_tps": round(decode_tps, 1),
         "cpu_busy": round(cpu_busy_between(cpu0, cpu1), 1),
@@ -267,6 +274,71 @@ def fetch_models(base_url: str, api_key: str, timeout: float) -> str:
         return data["data"][0]["id"]
     except Exception:  # noqa: BLE001
         return ""
+
+
+# ── Prefill 校準 ────────────────────────────────────────────────────────
+
+
+def build_calib_prompt(target_tokens: int, tag: str) -> str:
+    """做出約略 target_tokens 個 token 的 prompt。
+
+    開頭放隨機標記，確保每次的 token 前綴都不一樣 → 不會命中前一次的
+    prompt cache，量到的才是真的 prefill 速度。
+    """
+    unit = "alpha bravo charlie delta echo foxtrot golf hotel india juliet "
+    repeats = max(1, target_tokens // 6)
+    return "MARKER-%s-%s %s" % (tag, os.urandom(6).hex(), unit * repeats)
+
+
+def calibrate(base_url: str, api_key: str, model: str, timeout: float,
+              stream: bool, sizes=(64, 1024, 4096), rounds: int = 2) -> dict:
+    """用不同長度的 prompt 量出「固定延遲」與「prefill 速率」。
+
+    模型：TTFT ≈ 固定延遲 + prompt_tokens / prefill_rate
+    用最小平方法配這條線，兩個參數一起求出來。
+
+    為什麼要這樣做：短 prompt 的「tokens ÷ TTFT」幾乎全是固定延遲，
+    量不到真正的 prefill 速率；長 prompt 的 TTFT 又會隨長度成長，
+    不能用固定秒數去卡。用多個長度配線才能把兩者拆開。
+  """
+    points = []
+    for index, target in enumerate(sizes):
+        best = None
+        for _ in range(rounds):
+            prompt = build_calib_prompt(target, "cal%d" % index)
+            try:
+                result = call_engine(base_url, prompt, 4, api_key, model,
+                                     timeout, stream)
+            except EngineError:
+                continue
+            if result["prompt_tokens"] and result["ttft"]:
+                if best is None or result["ttft"] < best[1]:
+                    best = (result["prompt_tokens"], result["ttft"])
+        if best:
+            points.append(best)
+
+    if len(points) < 2:
+        return {}
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    count = len(xs)
+    mean_x = sum(xs) / count
+    mean_y = sum(ys) / count
+    variance = sum((x - mean_x) ** 2 for x in xs)
+    if variance <= 0:
+        return {}
+    slope = sum((x - mean_x) * (y - mean_y) for x, y in points) / variance
+    if slope <= 0:
+        return {}
+    rate = 1.0 / slope
+    overhead = mean_y - slope * mean_x
+    if overhead < 0:
+        overhead = 0.0
+    return {
+        "rate": round(rate, 1),
+        "overhead": round(overhead, 3),
+        "points": points,
+    }
 
 
 # ── 測試案例 ────────────────────────────────────────────────────────────
@@ -432,6 +504,7 @@ def run_case(case: dict, base_url: str, api_key: str, model: str, timeout: float
         "check_passed": bool(passed),
         "check_note": note,
         "sample": runs[-1]["text"][:300],
+        "ttft_limit": None,
     }
     if warm:
         result["cache_cold_prefill"] = warm["prefill_tps"]
@@ -441,19 +514,49 @@ def run_case(case: dict, base_url: str, api_key: str, model: str, timeout: float
     return result
 
 
-def judge(result: dict, thresholds: dict) -> list:
+def ttft_limit(result: dict, thresholds: dict, calib: dict) -> float:
+    """這個 case 的 TTFT 門檻。
+
+    短 prompt 用固定秒數；長 prompt 的 TTFT 本來就會隨 prompt 長度成長
+    （prefill 要時間讀整段），所以上限跟著放大：
+        上限 = max(固定門檻, 固定延遲 + prompt_tokens / prefill_rate * 1.5)
+    """
+    limit = thresholds["ttft"]
+    rate = (calib or {}).get("rate")
+    overhead = (calib or {}).get("overhead")
+    tokens = result.get("prompt_tokens") or 0
+    if rate and overhead is not None and tokens:
+        expected = overhead + tokens / rate
+        limit = max(limit, expected * 1.5)
+    return limit
+
+
+def judge(result: dict, thresholds: dict, calib: dict) -> list:
     """回傳這個 case 的違規項目清單。"""
     issues = []
     if result.get("error"):
         return [result["error"]]
-    if result.get("ttft") is not None and result["ttft"] > thresholds["ttft"]:
-        issues.append("TTFT %.1fs > %.1fs" % (result["ttft"], thresholds["ttft"]))
-    if result["prefill_tps"] and result["prefill_tps"] < thresholds["prefill"]:
-        issues.append("prefill %.0f < %.0f tok/s"
-                      % (result["prefill_tps"], thresholds["prefill"]))
-    if result["decode_tps"] and result["decode_tps"] < thresholds["decode"]:
-        issues.append("decode %.1f < %.1f tok/s"
-                      % (result["decode_tps"], thresholds["decode"]))
+
+    limit = ttft_limit(result, thresholds, calib)
+    if result.get("ttft") is not None and result["ttft"] > limit:
+        issues.append("TTFT %.1fs > %.1fs" % (result["ttft"], limit))
+
+    # prefill 用校準出來的速率判斷；短 prompt 的 tokens÷TTFT 量的是固定延遲，沒意義
+    rate = (calib or {}).get("rate")
+    if rate:
+        if rate < thresholds["prefill"]:
+            issues.append("prefill 實測 %.0f < %.0f tok/s" % (rate, thresholds["prefill"]))
+    elif (result.get("prompt_tokens") or 0) >= 500 and result.get("prefill_tps"):
+        if result["prefill_tps"] < thresholds["prefill"]:
+            issues.append("prefill %.0f < %.0f tok/s"
+                          % (result["prefill_tps"], thresholds["prefill"]))
+
+    # decode：輸出太短時速率不準（只生 30 個 token 的量測雜訊很大），不列入判定
+    if (result.get("completion_tokens") or 0) >= 64 and result.get("decode_tps"):
+        if result["decode_tps"] < thresholds["decode"]:
+            issues.append("decode %.1f < %.1f tok/s"
+                          % (result["decode_tps"], thresholds["decode"]))
+
     if result["cpu_busy"] > thresholds["max_cpu"]:
         issues.append("CPU %.0f%% > %.0f%%" % (result["cpu_busy"], thresholds["max_cpu"]))
     if result["mem_min"] < thresholds["min_mem"]:
@@ -463,25 +566,51 @@ def judge(result: dict, thresholds: dict) -> list:
     return issues
 
 
-def print_table(results: list, thresholds: dict) -> None:
-    header = ("%-12s %-10s %8s %9s %9s %7s %8s  %s"
-              % ("case", "分組", "TTFT(s)", "prefill", "decode", "CPU%", "Mem(GiB)", "判定"))
+def print_calibration(calib: dict, thresholds: dict) -> None:
+    if not calib:
+        print("\n\033[33m== Prefill 校準失敗\033[0m（門檻將退回固定值判定）")
+        return
+    print("\n== Prefill 校準 ==")
+    print("  固定延遲（HTTP + 排程 + CUDA graph）：%.3f 秒" % calib["overhead"])
+    print("  實際 prefill 速率：%.0f tok/s（門檻 ≥ %.0f）"
+          % (calib["rate"], thresholds["prefill"]))
+    print("  樣本：%s"
+          % " ".join("(%d tok, %.2fs)" % (n, t) for n, t in calib["points"]))
+    if calib["rate"] < thresholds["prefill"]:
+        print("  \033[31mprefill 未達標\033[0m")
+
+
+def print_table(results: list, thresholds: dict, calib: dict) -> None:
+    header = ("%-12s %-10s %8s %9s %9s %9s %7s %8s  %s"
+              % ("case", "分組", "TTFT(s)", "TTFT上限", "推算prefill", "decode",
+                 "CPU%", "Mem(GiB)", "判定"))
     print("\n" + header)
-    print("-" * 96)
+    print("-" * 108)
     for result in results:
         if result.get("error"):
-            print("%-12s %-10s %8s %9s %9s %7s %8s  %s"
-                  % (result["id"], result.get("group", "-"), "-", "-", "-", "-", "-",
+            print("%-12s %-10s %8s %9s %9s %9s %7s %8s  %s"
+                  % (result["id"], result.get("group", "-"), "-", "-", "-", "-", "-", "-",
                      "FAIL  " + result["error"][:40]))
             continue
-        issues = judge(result, thresholds)
+        issues = judge(result, thresholds, calib)
         verdict = "PASS" if not issues else "FAIL"
         detail = "通過" if not issues else "；".join(issues)
-        print("%-12s %-10s %8s %9s %9s %7s %8s  %s"
+        overhead = (calib or {}).get("overhead")
+        rate = (calib or {}).get("rate")
+        tokens = result.get("prompt_tokens") or 0
+        # 短 prompt 的推算值雜訊大，token 太少就不顯示，避免誤導
+        if overhead is not None and rate and result.get("ttft") and tokens >= 200:
+            implied = tokens / max(result["ttft"] - overhead, 0.001)
+        elif (result.get("prompt_tokens") or 0) >= 500:
+            implied = result.get("prefill_tps")
+        else:
+            implied = None
+        print("%-12s %-10s %8s %9s %9s %9s %7s %8s  %s"
               % (result["id"], result.get("group", "-"),
-                 result.get("ttft"), result.get("prefill_tps"),
-                 result.get("decode_tps"), result.get("cpu_busy"),
-                 result.get("mem_min"), verdict))
+                 result.get("ttft"), "%.1f" % ttft_limit(result, thresholds, calib),
+                 ("%.0f" % implied) if implied else "-",
+                 result.get("decode_tps"),
+                 result.get("cpu_busy"), result.get("mem_min"), verdict))
         if issues:
             print("               └─ %s" % detail)
 
@@ -513,6 +642,7 @@ def main() -> int:
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--no-stream", action="store_true")
     parser.add_argument("--no-warmup", action="store_true")
+    parser.add_argument("--no-calibrate", action="store_true")
     parser.add_argument("--out", default="")
     parser.add_argument("--compare", default="")
     parser.add_argument("--only", default="", help="只跑某幾個 case，逗號分隔")
@@ -563,6 +693,13 @@ def main() -> int:
         except EngineError as exc:
             print("  暖機請求失敗：%s" % exc)
 
+    calib = {}
+    if not args.no_calibrate:
+        print("  \033[36m校準中（量固定延遲與 prefill 速率）…\033[0m", flush=True)
+        calib = calibrate(base_url, args.api_key, model or "local", args.timeout,
+                          not args.no_stream)
+        print_calibration(calib, thresholds)
+
     only = {x.strip() for x in args.only.split(",") if x.strip()}
     cases = [c for c in CASES if not only or c["id"] in only]
     if args.quick:
@@ -578,13 +715,14 @@ def main() -> int:
         results.append(result)
         print("\r  [%d/%d] %-10s %-6s TTFT=%-6s prefill=%-7s decode=%-6s  (%ss)      "
               % (index, len(cases), case["id"],
-                 "FAIL" if judge(result, thresholds) else "PASS",
-                 result.get("ttft"), result.get("prefill_tps"),
+                 "FAIL" if judge(result, thresholds, calib) else "PASS",
+                 result.get("ttft"),
+                 ("%.0f" % calib["rate"]) if calib.get("rate") else result.get("prefill_tps"),
                  result.get("decode_tps"), result["wall_s"]), flush=True)
 
-    print_table(results, thresholds)
+    print_table(results, thresholds, calib)
 
-    failed = [r for r in results if judge(r, thresholds)]
+    failed = [r for r in results if judge(r, thresholds, calib)]
     print("\n== 總結 ==")
     print("  通過 %d / %d" % (len(results) - len(failed), len(results)))
     if failed:
@@ -598,6 +736,7 @@ def main() -> int:
         "model": model,
         "gpu": info,
         "cold_start_ttft": cold["ttft"] if cold else None,
+        "calibration": calib,
         "thresholds": thresholds,
         "results": results,
     }
