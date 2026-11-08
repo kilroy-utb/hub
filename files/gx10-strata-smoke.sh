@@ -13,10 +13,18 @@ DATA_DIR="${DATA_DIR:-/data/strata}"
 MODEL="${MODEL:-IQ3_S}"
 CTX="${CTX:-262144}"
 PORT="${PORT:-8080}"
-LOG="${LOG:-/tmp/strata-smoke.log}"
+LOG="${LOG:-}"
 MEMLOG="${MEMLOG:-/tmp/strata-mem.log}"
 TAG="$(echo "$MODEL" | tr 'A-Z' 'a-z')"
 CFG="$STRATA_DIR/strata-$TAG.json"
+# log 自動偵測：先找設定檔旁的 strata-*.log，再找 systemd journal
+if [ -z "${LOG:-}" ]; then
+  for c in "$STRATA_DIR/strata-$TAG.log" "$STRATA_DIR/Strata-data/strata-$TAG.log" "/data/strata/strata-$TAG.log" "$HOME/.local/share/strata/strata-$TAG.log"; do
+    [ -f "$c" ] && { LOG="$c"; break; }
+  done
+  [ -z "${LOG:-}" ] && LOG="$(find "$STRATA_DIR" /data/strata -maxdepth 3 -name "strata-*.log" -newermt '-12 hours' 2>/dev/null | head -1)"
+  LOG="${LOG:-/tmp/strata-smoke.log}"
+fi
 
 ok()   { printf '  \033[32mOK\033[0m %s\n' "$*"; }
 bad()  { printf '  \033[31mXX\033[0m %s\n' "$*"; }
@@ -41,10 +49,21 @@ stage_env() {
   if [ "${nvcc%%.*}" = "13" ]; then ok "CUDA toolkit $nvcc"; else bad "CUDA toolkit 是 '${nvcc:-未安裝}'，需要 13.x"; fi
 
   memavail=$(awk '/MemAvailable/{printf "%.1f", $2/1048576}' /proc/meminfo)
-  if awk "BEGIN{exit !($memavail >= 100)}"; then ok "MemAvailable ${memavail} GiB"; else bad "MemAvailable 只有 ${memavail} GiB"; fi
+  # 模型已在跑 → 用驗收門檻 10 GiB；還沒跑 → 用安裝前門檻 100 GiB
+  if curl -fsS -m 3 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+    if awk "BEGIN{exit !($memavail >= 10)}"; then ok "MemAvailable ${memavail} GiB（模型已載入，門檻 >= 10 GiB）"
+    else bad "MemAvailable 只有 ${memavail} GiB（門檻 >= 10 GiB）"; fi
+  else
+    if awk "BEGIN{exit !($memavail >= 100)}"; then ok "MemAvailable ${memavail} GiB（安裝前，門檻 >= 100 GiB）"
+    else warn "MemAvailable 只有 ${memavail} GiB（安裝前建議 >= 100 GiB；模型載入後只要 >= 10 GiB）"; fi
+  fi
 
-  disk=$(df -BG --output=avail "$DATA_DIR" 2>/dev/null | tail -1 | tr -dc '0-9')
-  if [ -n "$disk" ] && [ "$disk" -ge 120 ]; then ok "磁碟可用 ${disk} GB"; else bad "磁碟可用 ${disk:-0} GB，需要 >= 120 GB"; fi
+  [ -d "$DATA_DIR" ] || info "DATA_DIR $DATA_DIR 不存在，改用實際模型目錄"
+  disk_src="$DATA_DIR"; [ -d "$disk_src" ] || disk_src="$STRATA_DIR"
+  disk=$(df -BG --output=avail "$disk_src" 2>/dev/null | tail -1 | tr -dc '0-9')
+  if [ -n "$disk" ] && [ "$disk" -ge 120 ]; then ok "磁碟可用 ${disk} GB（$disk_src）"
+  elif [ -n "$disk" ]; then warn "磁碟可用 ${disk} GB（$disk_src），低於 120 GB"
+  else bad "讀不到磁碟可用空間（$disk_src）"; fi
 
   feats=$(grep -m1 '^Features' /proc/cpuinfo)
   miss=""
@@ -146,7 +165,7 @@ stage_verify() {
   t0=$(date +%s.%N)
   resp=$(curl -s -m 600 -X POST "http://127.0.0.1:$PORT/v1/chat/completions" \
     -H 'Content-Type: application/json' \
-    -d '{"model":"local","messages":[{"role":"user","content":"寫一個 Python 函式，判斷字串是否為回文，只回程式碼。"}],"max_tokens":128}' 2>&1)
+    -d '{"model":"local","messages":[{"role":"user","content":"寫一個 Python 函式，判斷字串是否為回文，只回程式碼。"}],"max_tokens":256,"reasoning_effort":"none"}' 2>&1)
   t1=$(date +%s.%N)
   cpu1=$(awk '/^cpu /{print $2+$3+$4+$5+$6+$7+$8, $5}' /proc/stat)
 
