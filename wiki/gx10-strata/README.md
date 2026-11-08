@@ -2,11 +2,11 @@
 
 在 **ASUS Ascent GX10**（NVIDIA GB10、128GB 統一記憶體、aarch64）上，用開源推論引擎 **Strata LLM** 跑 **Qwen3.8-Flash-Next 125B**（量化 IQ3_S）。
 
-這頁是六支程式的操作手冊：怎麼下載、怎麼執行、每個參數是什麼、怎麼判斷成功或失敗。
+這頁是這些程式的操作手冊：怎麼下載、怎麼執行、每個參數是什麼、怎麼判斷成功或失敗。
 
 ---
 
-## 六支程式各做什麼
+## 各支程式各做什麼
 
 | 程式 | 角色 | 什麼時候跑 |
 |---|---|---|
@@ -16,6 +16,7 @@
 | [`gx10-patch-ttft.py`](#五gx10-patch-ttftpy降低首字等待) | **小幫手**：開啟對話快取等參數，讓 agent 續接時不用重讀整段歷史（會先驗證引擎支援） | 裝完後建議跑一次 |
 | [`gx10-free-mem.sh`](#四gx10-free-memsh記憶體釋放) | **釋放記憶體**：卸載 Ollama 模型、收掉殘留推論行程、清 page cache | 安裝前記憶體不夠時跑 |
 | [`gx10-bench.py`](#六gx10-benchpy真實-prompt-benchmark) | **Benchmark**：送 8 輪真實 prompt，量 TTFT／prefill／decode／CPU 忙碌度，並檢查答案品質 | 想確認這台機器到底跑多快時跑 |
+| [`gx10-vscode-setup.sh`](#七gx10-vscode-setupsh接-vs-code) | **接入測試**：一次測完能不能接上 VS Code，並印出 Cline／Continue／原生 Chat 的設定片段 | 想在 VS Code 裡用這台機器時跑 |
 
 > 這些都是**純腳本**，不取代 Strata 官方的 `setup.py`。安裝本身仍是 `git clone` + `cmake` + `setup.py`，腳本只是把參數填好、把錯誤判斷寫清楚。
 
@@ -441,6 +442,60 @@ python3 gx10-bench.py --quick --out after.json --compare before.json
 
 ---
 
+## 七、`gx10-vscode-setup.sh`（接 VS Code）
+
+完整說明在 `files/README-vscode.md`。這支腳本在你的**筆電**上跑，不是 GX10 上。
+
+```bash
+# 筆電上先開轉發（視窗留著）
+ssh -N -L 8080:127.0.0.1:8080 kilroy@gx10-37a8
+
+# 測一次
+bash gx10-vscode-setup.sh --url http://127.0.0.1:8080
+bash gx10-vscode-setup.sh --url http://192.168.1.20:8080 --api-key sk-local
+```
+
+| 旗標 | 說明 |
+|---|---|
+| `--url` | 服務位置（預設 `http://127.0.0.1:8080`） |
+| `--api-key` | 有設金鑰時要帶 |
+| `--model` | 指定模型名稱（不給會自動抓） |
+| `--ctx` | 覆寫 context 長度 |
+| `--timeout` | 單次請求逾時秒數（預設 60） |
+
+它依序做五件事：
+
+1. `GET /health` —— 服務活著嗎、context 多長
+2. `GET /v1/models` —— 模型名稱
+3. 送一個串流 chat —— 量首字等待
+4. 送一個**帶 tools** 的請求 —— 確認工具呼叫能不能用（決定 agent 能不能改檔）
+5. 印出 Cline／Continue／VS Code 原生 Chat 三種設定片段
+
+### Strata 實際支援的端點
+
+| 端點 | 誰在用 |
+|---|---|
+| `POST /v1/chat/completions` | Cline、Roo Code、Continue |
+| `POST /v1/messages` | Claude Code |
+| `POST /v1/responses` | Codex CLI |
+| `POST /v1/messages/count_tokens` | Anthropic SDK |
+| `GET /v1/models`、`/health`、`/props`、`/slots`、`/v1/status`、`/metrics` | 檢查與監控 |
+
+**沒有** `/v1/completions`（FIM）→ VS Code 的行內自動補全不能用。
+**沒有** `/v1/embeddings` → codebase indexing 用不了。
+
+### 接上去之前要知道的
+
+| 事項 | 說明 |
+|---|---|
+| Base URL 要有 `/v1` | Cline／Continue 都會自己補 `/chat/completions`，`http://ip:8080` 會 404，尾斜杠也不行 |
+| VS Code 原生的 `url` 要寫完整 | 寫到 `/v1/chat/completions`，且 `toolCalling: true` 否則不會改檔 |
+| context 越大每輪越慢 | coding agent 每輪重送整段歷史；日常把 `--context` 降到 `65536` |
+| `reasoning_effort` 只收 4 個值 | `none` / `low` / `medium` / `high`，其他值回 HTTP 400 |
+| 沒設金鑰時別用主機名稱連 | Strata 的 DNS rebinding 防護會回 403；用 IP 連，或在設定檔加 `api_key` |
+
+---
+
 ## 驗收標準
 
 | 項目 | 門檻 |
@@ -468,6 +523,9 @@ python3 gx10-bench.py --quick --out after.json --compare before.json
 | 編譯出的引擎跑不起來 | CUDA arch 用錯 | 必須 `-DCMAKE_CUDA_ARCHITECTURES=121`（專案預設是 120） |
 | prompt 卡住數十秒 | n-gram 表在機械式磁碟隨機讀 | 加 `--ple-io ram` |
 | API 回應慢到不能忍 | 125B 開 xhigh 思考，首 token 中位數 38 秒 | 日常把 `reasoning_effort` 降到 low/off |
+| VS Code 端 404 | Base URL 少 `/v1` 或有尾斜杠 | 改成 `http://<主機>:8080/v1` |
+| VS Code 端 403 | 伺服器沒設金鑰，又用主機名稱連線 | 改用 IP，或在 `strata-iq3_s.json` 加 `api_key` |
+| VS Code 行內補全沒反應 | Strata 沒有 FIM 端點 | 補全改用其他工具，agent 對話才用本地模型 |
 
 ---
 

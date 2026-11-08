@@ -11,6 +11,8 @@ ASUS Ascent GX10（GB10 / 128GB 統一記憶體 / aarch64）跑 Qwen3.8-Flash-Ne
 | `gx10-bench.py` | 真實 prompt benchmark：8 個測試案例，量 TTFT／prefill／decode／CPU／記憶體，並檢查答案品質 |
 | `gx10-strata-smoke.sh` | 原本那支（已修正：記憶體門檻分階段、磁碟 fallback、關 thinking、log 自動偵測） |
 | `smoke-fixes.patch` | 相對於原版 smoke.sh 的 unified diff |
+| `README-vscode.md` | **VS Code 接入指南**：怎麼把 VS Code（Cline／Continue／原生 Chat）接到 Strata |
+| `gx10-vscode-setup.sh` | 一次測完「能不能接」：健康檢查 → 模型 → 首字等待 → 工具呼叫 → 印出可貼的設定 |
 
 ## 同步工作流程
 
@@ -57,6 +59,30 @@ bash gx10-verify.sh          # 一次跑完所有門檻檢查
 ```
 
 門檻可用環境變數覆寫：`MIN_DECODE=45 MIN_PREFILL=800 MIN_MEM=10 MAX_CPU=20 PORT=8080`
+
+## VS Code 接入
+
+完整說明看 [`README-vscode.md`](README-vscode.md)。
+
+快速步驟（VS Code 在筆電、Strata 在 GX10）：
+
+```bash
+# 1. 筆電上開轉發（視窗留著）
+ssh -N -L 8080:127.0.0.1:8080 kilroy@gx10-37a8
+
+# 2. 測一次，順便印出設定片段
+bash gx10-vscode-setup.sh --url http://127.0.0.1:8080
+```
+
+Cline 的 Base URL 填 `http://127.0.0.1:8080/v1`（**要有 `/v1`、不能有尾斜杠**）。
+
+三個要記住的限制：
+
+| 限制 | 影響 |
+|---|---|
+| 沒有 FIM 端點 | VS Code 行內自動補全不能用 |
+| context 越大每輪越慢 | 日常把 `--context` 降到 65536 |
+| `reasoning_effort` 只收 `none`/`low`/`medium`/`high` | 其他值會回 HTTP 400 |
 
 ## Benchmark（真實 prompt 測試）
 
