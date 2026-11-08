@@ -57,6 +57,17 @@ loggrep(){   # loggrep <pattern>
   fi
 }
 
+# ---------- 自動找設定檔（找不到就讓使用者用 CFG= 指定）----------
+if [ -z "$CFG" ]; then
+  for c in "$STRATA_DIR/strata-$TAG.json" "$STRATA_DIR/Strata-data/strata-$TAG.json" \
+           "/data/strata/strata-$TAG.json" "$HOME/.local/share/strata/strata-$TAG.json"; do
+    [ -f "$c" ] && { CFG="$c"; break; }
+  done
+  if [ -z "$CFG" ]; then
+    CFG="$(find "$STRATA_DIR" /data/strata -maxdepth 3 -name "strata-*.json" 2>/dev/null | head -1)"
+  fi
+fi
+
 auth=(); [ -n "$API_KEY" ] && auth=(-H "Authorization: Bearer $API_KEY")
 
 # ---------- 1. 服務狀態 ----------
