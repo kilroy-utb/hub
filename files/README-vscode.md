@@ -40,6 +40,14 @@ curl -s http://127.0.0.1:8080/health
 
 ### 1.2 直接開放給區網（不想一直開 SSH 時）
 
+最省事的方式是讓安裝腳本直接處理（會改設定、產生金鑰、開防火牆、重啟、驗證）：
+
+```bash
+bash gx10-strata-install.sh --expose
+```
+
+想手動改才往下看。
+
 設定檔位置：`~/Strata/strata-iq3_s.json`（`STRATA_DIR` 預設 `$HOME/Strata`）
 
 在**最外層**加兩個欄位（不是 `args` 裡面）：
@@ -60,6 +68,9 @@ journalctl -u strata -f
 
 > ⚠️ **沒有 `api_key` 就等於區網內任何人都能用你的模型**（免費幫別人跑 GPU）。
 > ⚠️ `api_key` 一旦設定，請求就必須帶 `Authorization: Bearer <key>` 或 `x-api-key` 標頭。
+
+> ⚠️ **只改 JSON 不夠**：`run-iq3_s.sh` 裡的 `--host` 是 CLI 參數，優先於設定檔的 `host`。
+> 要用 `gx10-patch-bind.py` 兩個檔案一起改，或直接跑 `gx10-strata-install.sh --expose`。
 
 防火牆（ufw）範例，只放行自己的網段：
 

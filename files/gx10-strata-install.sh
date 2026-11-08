@@ -5,12 +5,17 @@
 #  模型：Qwen3.8-Flash-Next 125B / IQ3_S（唯一在真實 DGX Spark 驗證過的完整 125B 量化）
 #
 #  用法：
-#    bash gx10-strata-install.sh                # 全部 7 步
+#    bash gx10-strata-install.sh                # 全部 7 步（步驟 8 要用 --expose 指定）
 #    bash gx10-strata-install.sh --only 0       # 只跑環境檢查
 #    bash gx10-strata-install.sh --from 3       # 從第 3 步開始
 #    bash gx10-strata-install.sh --skip 6,7     # 跳過指定步驟
 #    bash gx10-strata-install.sh --resume       # 自動跳過已完成的步驟
 #    bash gx10-strata-install.sh --no-systemd   # 不建立 systemd 服務
+#
+#  讓另一台機器連進來（VS Code / Cline / Continue）：
+#    bash gx10-strata-install.sh --expose           # 綁 0.0.0.0 + 金鑰 + 防火牆 + 重啟
+#    bash gx10-strata-install.sh --expose --new-key # 順便換一組新金鑰
+#    bash gx10-strata-install.sh --unexpose         # 收回成只給本機用
 #
 #  可覆寫的環境變數：
 #    STRATA_DIR   程式碼位置            預設 $HOME/Strata
@@ -26,7 +31,7 @@
 set -uo pipefail
 
 # 腳本版本：改了內容請一併 bump，現場對版本時看這行
-SCRIPT_VERSION="2026-11-05.1"
+SCRIPT_VERSION="2026-11-08.1"
 
 # ---------------------------------------------------------------- 設定值
 STRATA_DIR="${STRATA_DIR:-$HOME/Strata}"
@@ -35,6 +40,8 @@ MODEL="${MODEL:-IQ3_S}"
 CTX="${CTX:-262144}"
 PORT="${PORT:-8080}"
 API_HOST="${API_HOST:-127.0.0.1}"
+API_HOST_EXPLICIT=0
+[ -n "${API_HOST:-}" ] && API_HOST_EXPLICIT=1
 API_KEY="${API_KEY:-}"
 BRANCH_REPO="${BRANCH_REPO:-https://github.com/ccatzin-zumwalt/Strata.git}"
 BRANCH_SHA="${BRANCH_SHA:-ce16205d8b72fd489c7a2717f872133dcdbf3bd8}"
@@ -51,6 +58,8 @@ STEP_NAMES=(
   "下載模型與產生設定"
   "套用設定調整"
   "建立 systemd 服務並啟動"
+  "啟動與驗收"
+  "對外服務設定（遠端連線）"
 )
 
 ONLY=""
@@ -60,6 +69,10 @@ RESUME=0
 NO_SYSTEMD=0
 PLE_RAM=1
 DIAG=0
+EXPOSE_MODE="none"
+BIND_ADDR="0.0.0.0"
+NEW_KEY=0
+FIREWALL_MODE="auto"
 
 # ---------------------------------------------------------------- 輸出格式
 step_title() { printf '\n\033[1;36m--- 步驟 %s：%s ---\033[0m\n' "$1" "$2"; }
@@ -409,6 +422,130 @@ step7_verify() {
   step_end
 }
 
+# ============================================================ 步驟 8：對外服務設定
+step8_expose() {
+  step_title 8 "${STEP_NAMES[8]}"
+  local run_script="$STRATA_DIR/run-$TAG.sh"
+  [ -f "$run_script" ] || die "找不到啟動腳本 $run_script"
+  [ -f "$CFG" ] || die "找不到設定檔 $CFG"
+
+  local SUDO=""
+  command -v sudo >/dev/null 2>&1 && SUDO="sudo"
+  local bind="$BIND_ADDR"
+  local key="$API_KEY"
+  local keyfile="$STRATA_DIR/gx10-api-key.txt"
+
+  if [ "$EXPOSE_MODE" = "unexpose" ]; then
+    bind="127.0.0.1"
+    key=""
+  fi
+
+  # ── 金鑰 ────────────────────────────────────────────────
+  if [ "$EXPOSE_MODE" = "expose" ]; then
+    if [ -z "$key" ] && [ "$NEW_KEY" = "0" ] && [ -f "$keyfile" ]; then
+      key="$(tr -d '[:space:]' < "$keyfile")"
+      info "沿用既有的金鑰（$keyfile）"
+    fi
+    if [ -z "$key" ]; then
+      key="$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))')"
+      info "已產生新的 API 金鑰"
+    fi
+  fi
+
+  # ── 找 gx10-patch-bind.py ───────────────────────────────
+  local helper="$STRATA_DIR/gx10-patch-bind.py"
+  [ -f "$helper" ] || helper="$SCRIPT_DIR/gx10-patch-bind.py"
+  if [ ! -f "$helper" ]; then
+    if curl -fsSL -o "$STRATA_DIR/gx10-patch-bind.py" "https://kilroy-utb.github.io/hub/files/gx10-patch-bind.py"; then
+      helper="$STRATA_DIR/gx10-patch-bind.py"
+      ok "已下載 gx10-patch-bind.py"
+    else
+      die "找不到 gx10-patch-bind.py，請手動下載：curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-bind.py"
+    fi
+  fi
+
+  # ── 改設定（run 腳本 + JSON 一起改）────────────────────
+  local patch_args=(--run "$run_script" --cfg "$CFG" --bind "$bind")
+  if [ -n "$key" ]; then
+    patch_args+=(--api-key "$key")
+  elif [ "$EXPOSE_MODE" = "unexpose" ]; then
+    patch_args+=(--clear-api-key)
+  fi
+  python3 "$helper" "${patch_args[@]}" || die "設定檔改失敗"
+
+  # ── 防火牆 ──────────────────────────────────────────────
+  if [ "$EXPOSE_MODE" = "expose" ] && [ "$FIREWALL_MODE" != "none" ]; then
+    if ! command -v ufw >/dev/null 2>&1; then
+      warn "沒有 ufw，略過防火牆（若用其他防火牆，請自己放行 $PORT）"
+    elif [ "$FIREWALL_MODE" = "any" ]; then
+      $SUDO ufw allow "$PORT/tcp" && ok "防火牆：已放行 $PORT/tcp（全部來源）"
+    elif ip link show tailscale0 >/dev/null 2>&1; then
+      $SUDO ufw allow in on tailscale0 to any port "$PORT" proto tcp && ok "防火牆：只放行 tailscale0 的 $PORT（區網連不進來）"
+    else
+      $SUDO ufw allow "$PORT/tcp" && ok "防火牆：已放行 $PORT/tcp（找不到 tailscale0，請確認對外風險）"
+    fi
+  fi
+
+  # ── 重啟 ────────────────────────────────────────────────
+  if [ "$NO_SYSTEMD" = "1" ]; then
+    warn "當初是 --no-systemd 安裝的，請手動重啟：cd $STRATA_DIR && ./run-$TAG.sh"
+  else
+    $SUDO systemctl restart strata
+    info "已重啟服務，模型要重新載入到記憶體（等一下再驗證）"
+  fi
+  sleep 5
+
+  # ── 驗證監聽位址 ────────────────────────────────────────
+  local listening
+  listening="$(ss -tln 2>/dev/null | grep ":$PORT" || true)"
+  if [ -n "$listening" ]; then
+    ok "監聽狀態："
+    echo "$listening" | sed 's/^/    /'
+    if echo "$listening" | grep -qE "(0\.0\.0\.0|\*):$PORT"; then
+      ok "外部機器可以連進來"
+    else
+      bad "還沒綁到 0.0.0.0:$PORT，外部連線會被拒"
+    fi
+  else
+    bad "找不到 $PORT 的監聽，服務可能沒起來"
+    info "看日誌：journalctl -u strata -n 60"
+  fi
+
+  # ── 驗證 health ─────────────────────────────────────────
+  local i health_json=""
+  for i in $(seq 1 30); do
+    health_json="$(curl -s -m 5 "http://127.0.0.1:$PORT/health" 2>/dev/null)"
+    [ -n "$health_json" ] && break
+    sleep 10
+  done
+  if [ -n "$health_json" ]; then
+    ok "本機 health 有回應："
+    echo "$health_json" | head -c 400; echo
+    if echo "$health_json" | grep -qE '"api_key"[[:space:]]*:[[:space:]]*true'; then
+      ok "金鑰已生效"
+    else
+      warn "health 沒顯示 api_key=true —— 引擎可能沒吃到金鑰，請確認 run 腳本有 --api-key"
+    fi
+  else
+    warn "health 還沒回應（模型可能仍在載入），看日誌：journalctl -u strata -f"
+  fi
+
+  # ── 結果 ────────────────────────────────────────────────
+  if [ "$EXPOSE_MODE" = "expose" ]; then
+    printf '%s\n' "$key" > "$keyfile"
+    chmod 600 "$keyfile"
+    ok "金鑰已存到 $keyfile（權限 600）"
+    local host_short; host_short="$(hostname -s 2>/dev/null || echo gx10)"
+    info "遠端連線網址：http://$host_short:$PORT/v1"
+    info "VS Code 的 chatLanguageModels.json（貼到你的設定檔）："
+    printf '{\n  "name": "gx10-strata",\n  "vendor": "customendpoint",\n  "apiKey": "${input:chat.lm.secret.由VSCode產生}",\n  "apiType": "chat-completions",\n  "models": [\n    {\n      "id": "qwen3.8-flash-next-iq3_s",\n      "name": "Strata Qwen3.8 Flash Next IQ3_S",\n      "url": "http://%s:%s/v1",\n      "toolCalling": true,\n      "maxInputTokens": %s,\n      "maxOutputTokens": 32768\n    }\n  ]\n}\n' "$host_short" "$PORT" "$((CTX - 32768))" | sed 's/^/    /'
+    info "金鑰請貼到 VS Code 的 Custom Endpoint 設定（不要貼到公開 repo）"
+  else
+    ok "已收回成只給本機用（127.0.0.1:$PORT）"
+  fi
+  step_end
+}
+
 # ============================================================ 參數解析
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -418,12 +555,23 @@ while [ $# -gt 0 ]; do
     --resume)     RESUME=1; shift ;;
     --no-systemd) NO_SYSTEMD=1; shift ;;
     --diag)       DIAG=1; shift ;;
+    --expose)     EXPOSE_MODE="expose"; shift ;;
+    --unexpose)   EXPOSE_MODE="unexpose"; shift ;;
+    --bind)       BIND_ADDR="$2"; shift 2 ;;
+    --api-key)    API_KEY="$2"; shift 2 ;;
+    --new-key)    NEW_KEY=1; shift ;;
+    --firewall)   FIREWALL_MODE="$2"; shift 2 ;;
     -h|--help)    sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "未知參數：$1"; exit 1 ;;
   esac
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 對外模式：沒指定 --bind 就沿用 0.0.0.0；--unexpose 一律收回 loopback
+if [ "$EXPOSE_MODE" = "expose" ]; then
+  [ "$API_HOST_EXPLICIT" = "1" ] || API_HOST="$BIND_ADDR"
+fi
 
 # ============================================================ 記憶體診斷
 diag_mem() {
@@ -473,6 +621,16 @@ if should_run 4; then step4_model;  mark_done 4; fi
 if should_run 5; then step5_config; mark_done 5; fi
 if should_run 6; then step6_systemd; mark_done 6; fi
 if should_run 7; then step7_verify; mark_done 7; fi
+
+# 步驟 8 不預設執行，要明確要求（--expose / --unexpose / --only 8 / --from 8）
+if [ "$EXPOSE_MODE" = "none" ]; then
+  case ",$ONLY," in *",8,"*) EXPOSE_MODE="expose" ;; esac
+  if [ -z "$ONLY" ] && [ -n "$FROM" ] && [ "$FROM" -ge 8 ]; then EXPOSE_MODE="expose"; fi
+fi
+if [ "$EXPOSE_MODE" != "none" ]; then
+  step8_expose
+  mark_done 8
+fi
 
 printf '\n\033[1;32m全部步驟完成\033[0m\n'
 info "API： http://$API_HOST:$PORT/v1/chat/completions"

@@ -14,6 +14,7 @@
 | [`gx10-strata-smoke.sh`](#二gx10-strata-smokesh測試) | **測試**：檢查崩潰、查 experts 常駐、量 tok/s、量 CPU 忙碌度、取樣記憶體 | 想確認效能或懷疑退化時跑 |
 | [`gx10-patch-ple.py`](#三gx10-patch-plepy設定調整) | **小幫手**：把 `--ple-io ram` 寫進設定檔（安裝腳本第 5 步會自動呼叫） | 通常不用手動執行 |
 | [`gx10-patch-ttft.py`](#五gx10-patch-ttftpy降低首字等待) | **小幫手**：開啟對話快取等參數，讓 agent 續接時不用重讀整段歷史（會先驗證引擎支援） | 裝完後建議跑一次 |
+| `gx10-patch-bind.py` | **小幫手**：改監聽位址與 API 金鑰（安裝腳本第 8 步會自動呼叫） | 要讓別台機器連進來時 |
 | [`gx10-free-mem.sh`](#四gx10-free-memsh記憶體釋放) | **釋放記憶體**：卸載 Ollama 模型、收掉殘留推論行程、清 page cache | 安裝前記憶體不夠時跑 |
 | [`gx10-bench.py`](#六gx10-benchpy真實-prompt-benchmark) | **Benchmark**：送 8 輪真實 prompt，量 TTFT／prefill／decode／CPU 忙碌度，並檢查答案品質 | 想確認這台機器到底跑多快時跑 |
 | [`gx10-vscode-setup.sh`](#七gx10-vscode-setupsh接-vs-code) | **接入測試**：一次測完能不能接上 VS Code，並印出 Cline／Continue／原生 Chat 的設定片段 | 想在 VS Code 裡用這台機器時跑 |
@@ -55,7 +56,7 @@ curl http://127.0.0.1:8080/v1/chat/completions \
 
 ## 一、`gx10-strata-install.sh`（安裝）
 
-### 7 個步驟
+### 8 個步驟
 
 | 步驟 | 做什麼 | 預估時間 | 失敗代表什麼 |
 |---|---|---|---|
@@ -67,6 +68,7 @@ curl http://127.0.0.1:8080/v1/chat/completions \
 | 5 | 套用 `--ple-io ram` | 秒 | 找不到 helper 腳本（不影響主流程） |
 | 6 | 建立 systemd 服務並啟動 | 1 分鐘 | 沒有 root 權限 |
 | 7 | 等服務就緒 + 送測試請求驗收 | 5–20 分鐘 | 看到 `illegal memory access` 就是 issue #3525 |
+| 8 | **對外服務設定**：綁 0.0.0.0 + 金鑰 + 防火牆 + 重啟（**要明確指定才會跑**） | 2–5 分鐘 | 綁外部位址失敗 |
 
 ### 參數
 
@@ -78,9 +80,47 @@ bash gx10-strata-install.sh --skip 6,7     # 跳過指定步驟（逗號分隔�
 bash gx10-strata-install.sh --resume       # 自動跳過已完成的步驟
 bash gx10-strata-install.sh --no-systemd   # 不建立 systemd（手動啟動用）
 bash gx10-strata-install.sh --diag         # 只做記憶體診斷：誰占掉了記憶體
+bash gx10-strata-install.sh --expose       # 步驟 8：改成對外可連（0.0.0.0 + 金鑰 + 防火牆）
+bash gx10-strata-install.sh --only 8       # 同上，只做步驟 8
+bash gx10-strata-install.sh --unexpose     # 步驟 8：收回成只給本機用
 ```
 
 `--resume` 靠 `$STRATA_DIR/.install-state/stepN.done` 標記檔判斷中斷在哪。
+
+### 步驟 8：讓別台機器連進來（VS Code / Cline / Continue）
+
+安裝完之後，Strata 預設只監聽 `127.0.0.1`，所以從筆電連 `http://gx10-37a8:8080` 會得到
+`ERR_CONNECTION_REFUSED`。一條指令就能改成對外可連：
+
+```bash
+bash gx10-strata-install.sh --expose
+```
+
+它會依序做：
+
+1. 備份 `run-iq3_s.sh` 與 `strata-iq3_s.json`
+2. 呼叫 `gx10-patch-bind.py` 把 **run 腳本**（`--host` 是 CLI 參數，優先於設定檔）
+   與 **JSON**（`host` / `api_key`）一起改成對外模式
+3. 自動產生一組 API 金鑰（已存在 `~/Strata/gx10-api-key.txt` 就沿用；要換用 `--new-key`）
+4. 開防火牆：有 `tailscale0` 就只放行 Tailscale 介面，否則放行整個埠
+5. 重啟 systemd 並驗證監聽位址與 `/health`
+6. 印出 VS Code 的 `chatLanguageModels.json` 設定片段
+
+```bash
+bash gx10-strata-install.sh --expose --new-key      # 換一組新金鑰
+bash gx10-strata-install.sh --expose --firewall any # 放行所有來源（不只 Tailscale）
+bash gx10-strata-install.sh --expose --bind 100.x.x.x # 只綁單一 IP
+bash gx10-strata-install.sh --unexpose              # 收回成只給本機用（會拿掉金鑰）
+```
+
+金鑰存在 `~/Strata/gx10-api-key.txt`（權限 600），**不要貼到公開 repo**。
+
+也可以單獨用 helper（不改其他設定）：
+
+```bash
+python3 gx10-patch-bind.py --run ~/Strata/run-iq3_s.sh --cfg ~/Strata/strata-iq3_s.json --bind 0.0.0.0 --api-key sk-xxxx
+python3 gx10-patch-bind.py --run ~/Strata/run-iq3_s.sh --cfg ~/Strata/strata-iq3_s.json --bind 127.0.0.1 --clear-api-key
+```
 
 ### 可覆寫的環境變數
 
