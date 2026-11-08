@@ -536,6 +536,46 @@ bash gx10-vscode-setup.sh --url http://192.168.1.20:8080 --api-key sk-local
 
 ---
 
+## 八、`repo-map` skill（讓 agent 每個 session 先讀地圖）
+
+大海撈針的解法不是讓模型更聰明，而是**先給它一張地圖**。
+
+```bash
+curl -O https://kilroy-utb.github.io/hub/files/repo-map-install.sh
+bash repo-map-install.sh /path/to/your/repo
+```
+
+它會做四件事：
+
+1. 裝 `repo-map` skill 到 `~/.hermes/skills`、`~/.codex/skills`、`/workspace/.codex/skills`
+2. 在目標 repo 寫 `.github/instructions/repo-map.instructions.md`（`applyTo: "**"`）
+   → **VS Code Copilot Chat 每個 session 自動先讀地圖**
+3. 在 `AGENTS.md` / `.clinerules` / `.roorules` 追加同一段（不覆蓋既有內容）
+4. 產生第一次地圖
+
+地圖分兩層：
+
+| 層 | 內容 | 產生方式 | 成本 |
+|---|---|---|---|
+| 骨架層 | 目錄樹、行數、符號索引、入口點、TODO、import | 純腳本 | 幾秒、零失真 |
+| 語意層 | 每個頂層目錄的「用途 / 關鍵檔案 / 資料流 / 常見問題」 | 呼叫 Strata | 每個目錄一次 |
+
+```bash
+python3 ~/.hermes/skills/repo-map/scripts/repo-map.py --init --dir <repo>
+python3 ~/.hermes/skills/repo-map/scripts/repo-map.py --refresh --dir <repo>
+python3 ~/.hermes/skills/repo-map/scripts/repo-map.py --stats --dir <repo>
+```
+
+| 環境變數 | 預設 |
+|---|---|
+| `REPO_MAP_URL` | `http://gx10-37a8:8080/v1` |
+| `REPO_MAP_API_KEY` | 讀 `~/Strata/gx10-api-key.txt` |
+| `REPO_MAP_MODEL` | `qwen3.8-flash-next-iq3_s` |
+
+沒有金鑰也能跑：**只有骨架層時，符號索引 + grep 已經能解決大部分「大海撈針」**。
+
+---
+
 ## 驗收標準
 
 | 項目 | 門檻 |
