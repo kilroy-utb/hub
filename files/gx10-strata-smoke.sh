@@ -75,7 +75,7 @@ stage_env() {
 
 # --------------------------------------------------------------- stage: build
 stage_build() {
-  head2 "Stage A | 編譯引擎（GB10 sm_121）"
+  head2 "Stage A2 | 編譯引擎（GB10 sm_121）"
   cd "$STRATA_DIR" || { bad "找不到 $STRATA_DIR"; return 1; }
   cmake -G Ninja -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
@@ -103,7 +103,11 @@ stage_setup() {
     --yes || { bad "setup.py 失敗"; return 1; }
 
   if [ -f "$CFG" ]; then
-    python3 "$SCRIPT_DIR/gx10-patch-ple.py" "$CFG"
+    if [ -f "$SCRIPT_DIR/gx10-patch-ple.py" ]; then
+      python3 "$SCRIPT_DIR/gx10-patch-ple.py" "$CFG"
+    else
+      warn "找不到 gx10-patch-ple.py（可從 hub 抓：https://kilroy-utb.github.io/hub/files/gx10-patch-ple.py），略過 --ple-io ram 設定"
+    fi
   else
     bad "找不到設定檔 $CFG"
   fi
