@@ -73,6 +73,7 @@ EXPOSE_MODE="none"
 BIND_ADDR="0.0.0.0"
 NEW_KEY=0
 FIREWALL_MODE="auto"
+EXPOSE_STANDALONE=0
 
 # ---------------------------------------------------------------- 輸出格式
 step_title() { printf '\n\033[1;36m--- 步驟 %s：%s ---\033[0m\n' "$1" "$2"; }
@@ -573,6 +574,12 @@ if [ "$EXPOSE_MODE" = "expose" ]; then
   [ "$API_HOST_EXPLICIT" = "1" ] || API_HOST="$BIND_ADDR"
 fi
 
+# 只跑 --expose / --unexpose（沒有搭配 --only／--from／--resume）時，
+# 不要連帶重跑安裝步驟 0–7（那會重新下載 90 GB 模型）
+if [ "$EXPOSE_MODE" != "none" ] && [ -z "$ONLY" ] && [ -z "$FROM" ] && [ "$RESUME" = "0" ]; then
+  EXPOSE_STANDALONE=1
+fi
+
 # ============================================================ 記憶體診斷
 diag_mem() {
   printf '\n\033[1;36m=== 記憶體診斷 ===\033[0m\n'
@@ -613,14 +620,16 @@ info "設定：$MODEL / ctx $CTX / 埠號 $PORT / 監聽 $API_HOST"
 
 if [ "$DIAG" = "1" ]; then diag_mem; exit 0; fi
 
-if should_run 0; then step0_env;    mark_done 0; fi
-if should_run 1; then step1_clone;  mark_done 1; fi
-if should_run 2; then step2_deps;   mark_done 2; fi
-if should_run 3; then step3_build;  mark_done 3; fi
-if should_run 4; then step4_model;  mark_done 4; fi
-if should_run 5; then step5_config; mark_done 5; fi
-if should_run 6; then step6_systemd; mark_done 6; fi
-if should_run 7; then step7_verify; mark_done 7; fi
+if [ "$EXPOSE_STANDALONE" != "1" ]; then
+  if should_run 0; then step0_env;    mark_done 0; fi
+  if should_run 1; then step1_clone;  mark_done 1; fi
+  if should_run 2; then step2_deps;   mark_done 2; fi
+  if should_run 3; then step3_build;  mark_done 3; fi
+  if should_run 4; then step4_model;  mark_done 4; fi
+  if should_run 5; then step5_config; mark_done 5; fi
+  if should_run 6; then step6_systemd; mark_done 6; fi
+  if should_run 7; then step7_verify; mark_done 7; fi
+fi
 
 # 步驟 8 不預設執行，要明確要求（--expose / --unexpose / --only 8 / --from 8）
 if [ "$EXPOSE_MODE" = "none" ]; then
