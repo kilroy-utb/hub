@@ -113,7 +113,7 @@ Cline 面板 → 齒輪 → API Provider → 選 **OpenAI Compatible**：
 | 欄位 | 填什麼 |
 |---|---|
 | Base URL | `http://127.0.0.1:8080/v1` |
-| API Key | 沒設 key 就留空；有設就填 `sk-local` 這種 |
+| API Key | 伺服器沒設 key 就留空（填任何字串也會被忽略）；有設就填對那組金鑰 |
 | Model ID | `qwen3.8-flash-next-iq3_s` |
 | Context Window | `262144` |
 | Max Tokens | `8192` |
