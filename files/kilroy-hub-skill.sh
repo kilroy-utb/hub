@@ -55,8 +55,11 @@ fi
 for dest in $DEST_DIRS "$HOME/.codex/skills"; do
   [ -d "$(dirname "$dest")" ] || continue
   mkdir -p "$dest/$SKILL"
-  rm -rf "${dest:?}/$SKILL"
-  cp -r "$WORK/$SKILL" "$dest/$SKILL"
+  cp -r "$WORK/$SKILL/." "$dest/$SKILL/"
+  # 清掉這次不再存在的舊檔案（只刪檔案，不刪目錄，避免誤傷）
+  ( cd "$WORK/$SKILL" && find . -type f -print ) | while read -r f; do
+    [ -f "$dest/$SKILL/$f" ] || rm -f "$dest/$SKILL/$f"
+  done
   chmod +x "$dest/$SKILL"/scripts/*.sh 2>/dev/null || true
   say "已安裝 → $dest/$SKILL"
 done
