@@ -31,7 +31,7 @@
 set -uo pipefail
 
 # 腳本版本：改了內容請一併 bump，現場對版本時看這行
-SCRIPT_VERSION="2026-11-08.1"
+SCRIPT_VERSION="2026-11-08.2"
 
 # ---------------------------------------------------------------- 設定值
 STRATA_DIR="${STRATA_DIR:-$HOME/Strata}"
