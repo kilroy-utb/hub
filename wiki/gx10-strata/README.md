@@ -2,11 +2,11 @@
 
 在 **ASUS Ascent GX10**（NVIDIA GB10、128GB 統一記憶體、aarch64）上，用開源推論引擎 **Strata LLM** 跑 **Qwen3.8-Flash-Next 125B**（量化 IQ3_S）。
 
-這頁是三支程式的操作手冊：怎麼下載、怎麼執行、每個參數是什麼、怎麼判斷成功或失敗。
+這頁是六支程式的操作手冊：怎麼下載、怎麼執行、每個參數是什麼、怎麼判斷成功或失敗。
 
 ---
 
-## 五支程式各做什麼
+## 六支程式各做什麼
 
 | 程式 | 角色 | 什麼時候跑 |
 |---|---|---|
@@ -15,8 +15,9 @@
 | [`gx10-patch-ple.py`](#三gx10-patch-plepy設定調整) | **小幫手**：把 `--ple-io ram` 寫進設定檔（安裝腳本第 5 步會自動呼叫） | 通常不用手動執行 |
 | [`gx10-patch-ttft.py`](#五gx10-patch-ttftpy降低首字等待) | **小幫手**：開啟對話快取等參數，讓 agent 續接時不用重讀整段歷史（會先驗證引擎支援） | 裝完後建議跑一次 |
 | [`gx10-free-mem.sh`](#四gx10-free-memsh記憶體釋放) | **釋放記憶體**：卸載 Ollama 模型、收掉殘留推論行程、清 page cache | 安裝前記憶體不夠時跑 |
+| [`gx10-bench.py`](#六gx10-benchpy真實-prompt-benchmark) | **Benchmark**：送 8 輪真實 prompt，量 TTFT／prefill／decode／CPU 忙碌度，並檢查答案品質 | 想確認這台機器到底跑多快時跑 |
 
-> 這三支都是**純腳本**，不取代 Strata 官方的 `setup.py`。安裝本身仍是 `git clone` + `cmake` + `setup.py`，腳本只是把參數填好、把錯誤判斷寫清楚。
+> 這些都是**純腳本**，不取代 Strata 官方的 `setup.py`。安裝本身仍是 `git clone` + `cmake` + `setup.py`，腳本只是把參數填好、把錯誤判斷寫清楚。
 
 ---
 
@@ -31,7 +32,8 @@ curl -O https://kilroy-utb.github.io/hub/files/gx10-strata-smoke.sh
 curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ple.py
 curl -O https://kilroy-utb.github.io/hub/files/gx10-patch-ttft.py
 curl -O https://kilroy-utb.github.io/hub/files/gx10-free-mem.sh
-chmod +x gx10-strata-*.sh gx10-patch-ple.py gx10-patch-ttft.py
+curl -O https://kilroy-utb.github.io/hub/files/gx10-bench.py
+chmod +x gx10-strata-*.sh gx10-patch-ple.py gx10-patch-ttft.py gx10-bench.py
 
 # 2. 先只做環境檢查（不動任何東西）
 bash gx10-strata-install.sh --only 0
@@ -267,6 +269,64 @@ systemctl restart strata   # 或 cd /home/kilroy/Strata && ./run-iq3_s.sh
 - 引擎若回報不認得某個選項，`cp` 備份回來即可
 
 ⚠ **手動加的引擎參數，之後重跑 `setup.py` 會被清掉**，重跑後要再套一次。
+
+---
+
+---
+
+## 六、`gx10-bench.py`（真實 prompt benchmark）
+
+`gx10-strata-smoke.sh` 的 verify 階段只確認「服務活著、沒有 CUDA error 77、速度達標」，
+這個 benchmark 才會**真的送一輪 prompt**，量出這台機器實際跑起來多快，以及答案品質對不對。
+
+適合拿來做兩件事：
+
+1. 驗收：交機之前跑一次，確認效能與品質都過門檻
+2. 比較：改完設定（例如套用 `gx10-patch-ttft.py`）再跑一次，看有沒有變快
+
+```bash
+python3 gx10-bench.py                      # 完整 8 個案例
+python3 gx10-bench.py --quick              # 快測（跳過長上下文，約 2 分鐘）
+python3 gx10-bench.py --repeat 3           # 每個案例重跑 3 次取中位數
+python3 gx10-bench.py --out report.json    # 存報告
+python3 gx10-bench.py --compare old.json   # 跟舊報告比（看改了設定有沒有比較快）
+python3 gx10-bench.py --only code,zh       # 只跑指定案例
+```
+
+### 測哪些東西
+
+| 案例 | 類別 | 在量什麼 |
+|---|---|---|
+| `ttft` | 核心 | 首字等待（agent 每輪都會感受到） |
+| `decode` | 核心 | 長輸出解碼速度 |
+| `code` | 品質 | 生成程式碼，檢查有沒有真的寫出函式 |
+| `zh` | 品質 | 繁體中文，中文字元數是否足夠 |
+| `reasoning` | 品質 | 邏輯推理，檢查有沒有列出步驟 |
+| `instruction` | 品質 | 指令遵循，檢查有沒有只回要的部分 |
+| `longctx` | 壓力 | 長 prompt 的 prefill 速度 |
+| `cache` | 壓力 | 同一 prompt 送兩次，看快取有沒有命中 |
+
+### 判定門檻
+
+預設跟 `gx10-verify.sh` 對齊，可用 CLI 覆寫：
+
+```bash
+python3 gx10-bench.py --ttft 3 --prefill 800 --decode 45 --max-cpu 20 --min-mem 10
+```
+
+環境變數：`PORT`（預設 8080）、`API_KEY`、`MODEL`、`BENCH_TIMEOUT`（預設 900 秒）。
+
+結束碼：`0` 全部通過、`1` 有項目未達門檻、`2` 服務沒起來。
+
+### 怎麼比較兩次結果
+
+```bash
+python3 gx10-bench.py --quick --out before.json
+# 改設定（例如套 gx10-patch-ttft.py）並重啟服務
+python3 gx10-bench.py --quick --out after.json --compare before.json
+```
+
+會列出每個案例的 prefill／decode 增減量，正數代表變快。
 
 ---
 

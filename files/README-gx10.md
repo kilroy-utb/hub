@@ -8,6 +8,7 @@ ASUS Ascent GX10（GB10 / 128GB 統一記憶體 / aarch64）跑 Qwen3.8-Flash-Ne
 |---|---|
 | `sync_github_files.sh` | 把本 repo 的 `files/` 目錄同步到本機（新增／更新／刪除都處理） |
 | `gx10-verify.sh` | 只做驗收：error 77、experts 常駐、CPU 忙碌度、server 端計時、記憶體、設定檔 |
+| `gx10-bench.py` | 真實 prompt benchmark：8 個測試案例，量 TTFT／prefill／decode／CPU／記憶體，並檢查答案品質 |
 | `gx10-strata-smoke.sh` | 原本那支（已修正：記憶體門檻分階段、磁碟 fallback、關 thinking、log 自動偵測） |
 | `smoke-fixes.patch` | 相對於原版 smoke.sh 的 unified diff |
 
@@ -56,3 +57,55 @@ bash gx10-verify.sh          # 一次跑完所有門檻檢查
 ```
 
 門檻可用環境變數覆寫：`MIN_DECODE=45 MIN_PREFILL=800 MIN_MEM=10 MAX_CPU=20 PORT=8080`
+
+## Benchmark（真實 prompt 測試）
+
+`gx10-verify.sh` 只確認「服務活著且達標」，`gx10-bench.py` 才會真的送一輪 prompt，
+量出這台機器實際跑起來多快，以及答案品質對不對。
+
+```bash
+python3 gx10-bench.py                      # 完整 8 個案例
+python3 gx10-bench.py --quick              # 快測（跳過長上下文，約 2 分鐘）
+python3 gx10-bench.py --repeat 3           # 每個案例重跑 3 次取中位數
+python3 gx10-bench.py --out report.json    # 存報告
+python3 gx10-bench.py --compare old.json   # 跟舊報告比（看改了設定有沒有比較快）
+python3 gx10-bench.py --only code,zh       # 只跑指定案例
+```
+
+### 測哪些東西
+
+| 案例 | 類別 | 在量什麼 |
+|---|---|---|
+| `ttft` | 核心 | 首字等待（agent 每輪都會感受到） |
+| `decode` | 核心 | 長輸出解碼速度 |
+| `code` | 品質 | 生成程式碼，檢查有沒有真的寫出函式 |
+| `zh` | 品質 | 繁體中文，中文字元數是否足夠 |
+| `reasoning` | 品質 | 邏輯推理，檢查有沒有列出步驟 |
+| `instruction` | 品質 | 指令遵循，檢查有沒有只回要的部分 |
+| `longctx` | 壓力 | 長 prompt 的 prefill 速度 |
+| `cache` | 壓力 | 同一 prompt 送兩次，看快取有沒有命中 |
+
+### 判定門檻
+
+預設跟 `gx10-verify.sh` 對齊，可用 CLI 覆寫：
+
+```bash
+python3 gx10-bench.py --ttft 3 --prefill 800 --decode 45 --max-cpu 20 --min-mem 10
+```
+
+結束碼：`0` 全部通過、`1` 有項目未達門檻、`2` 服務沒起來。
+
+### 環境變數
+
+`PORT`（預設 8080）、`API_KEY`（有設就帶 Authorization header）、`MODEL`、
+`BENCH_TIMEOUT`（預設 900 秒）。
+
+### 怎麼比較兩次結果
+
+```bash
+python3 gx10-bench.py --quick --out before.json
+# 改設定（例如套 gx10-patch-ttft.py）並重啟服務
+python3 gx10-bench.py --quick --out after.json --compare before.json
+```
+
+會列出每個案例的 prefill／decode 增減量，正數代表變快。
