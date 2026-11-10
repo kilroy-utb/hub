@@ -296,6 +296,14 @@ fi
 
 # ---------- 總結 ----------
 step "總結"
+
+# 沒寫設定檔就要大聲講，否則 codex 會默默走預設的 OpenAI provider
+if [ ! -f "$HOME/.codex/config.toml" ]; then
+  warn "還沒有 ~/.codex/config.toml —— codex 會走預設 OpenAI provider，呼叫 api.openai.com 必然 401"
+  info "請執行：bash $(basename "$0") --with-config --gx10-ip 100.x.y.z"
+  info "（100.x.y.z 是 GX10 的 Tailscale IP，在 GX10 上跑 tailscale ip -4 取得）"
+  FAILURES=$((FAILURES + 1))
+fi
 if [ "$FAILURES" -eq 0 ]; then
   pass "全部完成"
 else
