@@ -22,12 +22,11 @@ fi
 
 pass() { printf '  %s[OK]%s %s\n' "$GREEN" "$RESET" "$1"; }
 warn() { printf '  %s[!!]%s %s\n' "$YELLOW" "$RESET" "$1"; }
-fail() { printf '  %s[XX]%s %s\n' "$RED" "$RESET" "$1"; }
+fail() { printf '  %s[XX]%s %s\n' "$RED" "$RESET" "$1"; FAILURES=$((FAILURES + 1)); }
 info() { printf '  %s--%s %s\n' "$BLUE" "$RESET" "$1"; }
 step() { printf '\n%s== %s ==%s\n' "$BLUE" "$1" "$RESET"; }
 
 FAILURES=0
-note_fail() { FAILURES=$((FAILURES + 1)); }
 
 # ---------- 參數 ----------
 MODE="install"
@@ -137,12 +136,12 @@ case "$npm_prefix" in
   *) info "前綴位置中性" ;;
 esac
 
-# PATH 是否含前綴 bin
-prefix_bin="${npm_prefix%/}/bin"
-if printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$prefix_bin"; then
-  pass "PATH 已包含 $prefix_bin"
+# PATH 是否含前綴 bin（此時先看原本的前綴，步驟 4 改完會重算）
+current_prefix_bin="${npm_prefix%/}/bin"
+if printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$current_prefix_bin"; then
+  pass "PATH 已包含 $current_prefix_bin"
 else
-  warn "PATH 尚未包含 $prefix_bin（安裝後 codex 會找不到）"
+  warn "PATH 尚未包含 $current_prefix_bin（安裝後 codex 會找不到）"
 fi
 
 # node 缺或多版本
@@ -202,7 +201,9 @@ fi
 
 mkdir -p "$HOME/.local"
 npm config set prefix "$HOME/.local" >/dev/null 2>&1
-pass "npm 前綴設為 $HOME/.local"
+npm_prefix="$(npm config get prefix 2>/dev/null || echo "$HOME/.local")"
+prefix_bin="${npm_prefix%/}/bin"
+pass "npm 前綴設為 $npm_prefix"
 
 if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
   printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.bashrc"
@@ -210,20 +211,38 @@ if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
 else
   pass "~/.bashrc 已有 PATH 設定"
 fi
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$prefix_bin:$PATH"
+
+if printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$prefix_bin"; then
+  pass "PATH 已指向 $prefix_bin"
+else
+  fail "PATH 沒指向 $prefix_bin"
+fi
 
 # ---------- 步驟 5：安裝 Codex CLI ----------
 step "步驟 5：安裝 Codex CLI"
 
 # 以「家目錄裡的那份」為準，避免誤認到系統其他位置的舊版
+prefix_bin="${npm_prefix%/}/bin"
 CODEX_BIN="$prefix_bin/codex"
-if [ -x "$CODEX_BIN" ]; then
-  info "家目錄已有：$("$CODEX_BIN" --version 2>&1 | head -1)"
+
+# npm 會在 $prefix_bin 建 symlink。若那裡已經有檔案（官方 standalone 腳本裝的
+# 執行檔、或前一次殘留），npm 會報 EEXIST 而中止 —— 先移到旁邊保留，不刪除。
+if [ -e "$CODEX_BIN" ] || [ -L "$CODEX_BIN" ]; then
+  if [ -L "$CODEX_BIN" ] && readlink "$CODEX_BIN" | grep -q "node_modules/@openai/codex"; then
+    info "家目錄已有（npm 管理）：$("$CODEX_BIN" --version 2>&1 | head -1)"
+  else
+    old_ver="(無法執行)"
+    [ -x "$CODEX_BIN" ] && old_ver="$("$CODEX_BIN" --version 2>&1 | head -1)"
+    stash="$CODEX_BIN.pre-npm-$(date +%Y%m%d-%H%M%S)"
+    mv -f "$CODEX_BIN" "$stash" && pass "既有檔案已移到 $(basename "$stash")（$old_ver）"
+    info "保留著，需要時可以 mv 回來"
+  fi
 elif command -v codex >/dev/null 2>&1; then
   info "其他位置已有：$(command -v codex)（將改安裝到家目錄）"
 fi
 
-if npm install -g @openai/codex --registry=https://registry.npmjs.org/; then
+if npm install -g @openai/codex --registry=https://registry.npmjs.org/ 2>&1 | tail -5; then
   pass "npm 安裝完成"
 else
   fail "npm 安裝失敗，試試鏡像站："
