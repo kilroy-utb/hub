@@ -28,6 +28,11 @@ step() { printf '\n%s== %s ==%s\n' "$BLUE" "$1" "$RESET"; }
 
 FAILURES=0
 
+# 使用者「原本」的 PATH。腳本裡的 export 只影響自己的行程，不會回傳到
+# 呼叫它的 shell —— 這正是 codex: command not found 的主因。
+# 先存起來，最後用它判斷「使用者現在這個終端機」看得到看不到 codex。
+ORIG_PATH="$PATH"
+
 # ---------- 參數 ----------
 MODE="install"
 WITH_CONFIG=0
@@ -205,12 +210,18 @@ npm_prefix="$(npm config get prefix 2>/dev/null || echo "$HOME/.local")"
 prefix_bin="${npm_prefix%/}/bin"
 pass "npm 前綴設為 $npm_prefix"
 
-if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
-  printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.bashrc"
-  pass "已寫入 ~/.bashrc"
-else
-  pass "~/.bashrc 已有 PATH 設定"
-fi
+# ~/.bashrc 一定要在「最後」才有 .local/bin 的匯出：
+#   - 寫在中間可能被後面的 nvm / asdf / mise 整個覆寫掉
+#   - 只用 grep '.local/bin' 會誤判（註解掉的行也算數）
+# 所以先清掉舊的同類匯出，再統一寫到檔案最後。
+bashrc="$HOME/.bashrc"
+touch "$bashrc"
+sed -i -E \
+  -e '/^[[:space:]]*export[[:space:]]+PATH=.*\.local\/bin/d' \
+  -e '/^#[[:space:]]*(>>>|<<<)[[:space:]]*codex-cli PATH/d' \
+  "$bashrc"
+printf '\n# >>> codex-cli PATH >>>\nexport PATH="$HOME/.local/bin:$PATH"\n# <<< codex-cli PATH <<<\n' >> "$bashrc"
+pass "已在 ~/.bashrc 最後寫入 .local/bin 的 PATH 匯出"
 export PATH="$prefix_bin:$PATH"
 
 if printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$prefix_bin"; then
@@ -254,7 +265,15 @@ hash -r 2>/dev/null || true
 if [ -x "$CODEX_BIN" ]; then
   pass "codex 版本：$("$CODEX_BIN" --version 2>&1 | head -1)"
   pass "codex 路徑：$CODEX_BIN"
-  pass "PATH 已優先指向家目錄版本"
+  # 用「原本的 PATH」判斷，而不是腳本自己 export 過的 PATH ——
+  # 否則一定會顯示 OK，使用者離開腳本後才會撞到 command not found。
+  if printf '%s' "$ORIG_PATH" | tr ':' '\n' | grep -qx "$prefix_bin"; then
+    pass "PATH 已優先指向家目錄版本"
+  else
+    warn "目前這個終端機還看不到 codex（腳本的 export 只對自己有效）"
+    printf '       貼上這行即可：export PATH="$HOME/.local/bin:$PATH"\n'
+    printf '       然後：codex --version\n'
+  fi
 else
   fail "找不到 $CODEX_BIN"
   info "重開終端機讓 ~/.bashrc 生效後再試：codex --version"
@@ -313,6 +332,8 @@ fi
 cat <<'EOF'
 
 下一步：
+  0. 讓這個終端機認得 codex（腳本的 export 只對自己有效）
+       export PATH="$HOME/.local/bin:$PATH"
   1. 設定金鑰
        export STRATA_API_KEY="sk-你的金鑰"
        echo 'export STRATA_API_KEY="sk-你的金鑰"' >> ~/.bashrc
