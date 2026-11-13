@@ -9,6 +9,8 @@
 #   bash codex-setup-linux.sh --log-file /tmp/x.log
 #   bash codex-setup-linux.sh --upgrade         # 強制升級到最新版
 #   bash codex-setup-linux.sh --with-config --provider openai
+#   bash codex-setup-linux.sh --strata
+#   bash codex-setup-linux.sh --strata --gx10-ip 100.80.1.2 --gx10-port 8080 --model your-model
 #
 # 設計原則：
 #   - 冪等：已經有的東西不重裝
@@ -16,13 +18,13 @@
 #   - 沒有 root 也能跑：Node.js 走 ~/.local 的 tarball 安裝
 #   - 全程 log：每個指令、每個輸出都寫進 log 檔
 #
-# 腳本版本：2026-11-13.1
+# 腳本版本：2026-11-13.4
 # =============================================================================
 
 set -uo pipefail
 
 # ────────────────────────────── 全域設定 ──────────────────────────────
-SCRIPT_VERSION="2026-11-13.3"
+SCRIPT_VERSION="2026-11-13.4"
 SCRIPT_NAME="$(basename "$0")"
 MIN_NODE_MAJOR=16          # Codex CLI 官方最低需求
 RECOMMEND_NODE_MAJOR=18    # 建議版本，低於此會額外提示
@@ -32,6 +34,10 @@ MODE="install"              # install | check | dry-run
 WITH_CONFIG=0
 UPGRADE=0
 PROVIDER="openai"
+GX10_IP=""
+GX10_PORT="8080"
+GX10_MODEL="qwen3.8-flash-next-iq3_s"
+ORIG_PATH="$PATH"
 LOG_FILE="${LOG_FILE:-$HOME/codex-setup-linux.log}"
 FAILURES=0
 WARNINGS=0
@@ -135,11 +141,20 @@ while [ $# -gt 0 ]; do
     --check)       MODE="check" ;;
     --dry-run)     MODE="dry-run" ;;
     --with-config) WITH_CONFIG=1 ;;
+    --strata)      WITH_CONFIG=1; PROVIDER="strata" ;;
+    --gx10-ip|--gx10-port|--model)
+      [ "$#" -ge 2 ] && [ -n "$2" ] || { echo "$1 缺少參數" >&2; exit 2; }
+      case "$1" in
+        --gx10-ip) GX10_IP="$2" ;;
+        --gx10-port) GX10_PORT="$2" ;;
+        --model) GX10_MODEL="$2" ;;
+      esac
+      WITH_CONFIG=1; PROVIDER="strata"; shift ;;
     --upgrade)     UPGRADE=1 ;;
     --provider)    PROVIDER="${2:-openai}"; shift ;;
     --log-file)    LOG_FILE="${2:-$LOG_FILE}"; shift ;;
     -h|--help)
-      sed -n '2,24p' "$0"
+      sed -n '2,26p' "$0"
       exit 0
       ;;
     *) echo "不認識的參數：$1" >&2; exit 2 ;;
@@ -147,6 +162,16 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+CONFIG_HOME="${CODEX_HOME:-$HOME/.codex}"
+case "$HOME:$CONFIG_HOME:$LOG_FILE" in
+  *".codex-home"*) echo "禁止寫入 Codex session 目錄" >&2; exit 1 ;;
+esac
+if [ "$WITH_CONFIG" -eq 1 ] && [ "$PROVIDER" != openai ] && [ "$PROVIDER" != strata ]; then
+  echo "僅支援 --provider openai 或 strata" >&2; exit 2
+fi
+[[ "$GX10_PORT" =~ ^[0-9]{1,5}$ ]] && [ "$((10#$GX10_PORT))" -ge 1 ] && [ "$((10#$GX10_PORT))" -le 65535 ] || { echo "無效連接埠" >&2; exit 2; }
+[[ "$GX10_MODEL" =~ ^[a-zA-Z0-9_./:-]+$ ]] || { echo "無效模型名稱" >&2; exit 2; }
+umask 077
 init_log
 
 if [ -t 1 ]; then
@@ -559,44 +584,26 @@ fi
 # ────────────────────────────── 步驟 6：npm 前綴 ──────────────────────────────
 step "步驟 6：修正 npm 全域前綴"
 
-ORIG_PATH="$PATH"
 NPM_PREFIX=""
 
 if command -v npm >/dev/null 2>&1; then
-  NPM_PREFIX="$(npm config get prefix 2>/dev/null || echo "")"
-  info "目前 npm 全域前綴：$NPM_PREFIX"
-
-  case "$NPM_PREFIX" in
-    "$HOME"/*)
-      pass "前綴在 home 底下，不會撞 EACCES" ;;
-    /usr/lib*|/usr/local/lib*|/usr/local/share*|/usr/*)
-      warn "前綴在系統目錄，全域安裝需要 root —— 將改用 \$HOME/.local"
-      if [ "$MODE" = "install" ]; then
-        run_cmd npm config set prefix "$HOME/.local" || warn "設定 prefix 失敗"
-        NPM_PREFIX="$(npm config get prefix 2>/dev/null || echo "$HOME/.local")"
-        pass "npm 全域前綴已改為 $NPM_PREFIX"
-      fi ;;
-    *)
-      info "前綴位置中性" ;;
-  esac
-
+  NPM_PREFIX="$HOME/.local"
+  info "本腳本固定安裝至 $NPM_PREFIX，不修改 npm 全域設定"
   PREFIX_BIN="${NPM_PREFIX%/}/bin"
-  if printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$PREFIX_BIN"; then
-    pass "PATH 已包含 $PREFIX_BIN"
-  else
-    warn "PATH 沒有包含 $PREFIX_BIN"
-    if [ "$MODE" = "install" ]; then
-      BASHRC="$HOME/.bashrc"
-      touch "$BASHRC"
-      # 先清掉舊的同類匯出（註解掉的也算），再統一寫到檔案最後
-      sed -i -E \
-        -e '/^[[:space:]]*export[[:space:]]+PATH=.*\.local\/bin/d' \
-        -e '/^#[[:space:]]*(>>>|<<<)[[:space:]]*codex-cli PATH/d' \
-        "$BASHRC"
-      printf '\n# >>> codex-cli PATH >>>\nexport PATH="$HOME/.local/bin:$PATH"\n# <<< codex-cli PATH <<<\n' >> "$BASHRC"
-      pass "已在 ~/.bashrc 最後寫入 .local/bin 的 PATH 匯出"
-      export PATH="$PREFIX_BIN:$PATH"
+  if [ "$MODE" = "install" ]; then
+    startup_files=("$HOME/.bashrc" "$HOME/.profile")
+    if [ -f "$HOME/.bash_profile" ]; then
+      startup_files+=("$HOME/.bash_profile")
+    elif [ -f "$HOME/.bash_login" ]; then
+      startup_files+=("$HOME/.bash_login")
     fi
+    for startup_file in "${startup_files[@]}"; do
+      if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$startup_file" 2>/dev/null; then
+        printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$startup_file" || exit 1
+      fi
+    done
+    export PATH="$PREFIX_BIN:$PATH"
+    pass "已設定 Bash 互動及登入環境的 PATH"
   fi
 fi
 
@@ -609,7 +616,7 @@ if [ -n "$NPM_PREFIX" ]; then
 fi
 
 # 已存在就跳過（冪等）
-if [ -n "$CODEX_BIN" ] && [ -x "$CODEX_BIN" ] && [ "$UPGRADE" -ne 1 ]; then
+if [ -n "$CODEX_BIN" ] && [ -x "$CODEX_BIN" ] && "$CODEX_BIN" --version >/dev/null 2>&1 && [ "$UPGRADE" -ne 1 ]; then
   existing_ver="$("$CODEX_BIN" --version 2>&1 | head -1)"
   pass "已安裝：$existing_ver（$CODEX_BIN）"
   # 順便比對 npm registry 上的最新版（需要網路，失敗不影響流程）
@@ -649,15 +656,11 @@ else
       info "安裝 @openai/codex（最新版）……"
       PKG_SPEC="@openai/codex"
     fi
-    if run_cmd npm install -g "$PKG_SPEC" --registry=https://registry.npmjs.org/; then
+    if run_cmd npm install -g --prefix "$NPM_PREFIX" "$PKG_SPEC" --registry=https://registry.npmjs.org/; then
       pass "npm 安裝完成"
     else
-      warn "官方 registry 安裝失敗，改用 npmmirror 鏡像"
-      if run_cmd npm install -g "$PKG_SPEC" --registry=https://registry.npmmirror.com/; then
-        pass "鏡像安裝完成"
-      else
-        fail "Codex CLI 安裝失敗（兩個 registry 都試過）"
-      fi
+      fail "Codex CLI 安裝失敗；不自動改用其他來源"
+      exit 1
     fi
     hash -r 2>/dev/null || true
   fi
@@ -673,8 +676,8 @@ elif command -v codex >/dev/null 2>&1; then
   CODEX_FOUND="$(command -v codex)"
 fi
 
-if [ -n "$CODEX_FOUND" ]; then
-  pass "codex 版本：$("$CODEX_FOUND" --version 2>&1 | head -1)"
+if [ -n "$CODEX_FOUND" ] && codex_version="$("$CODEX_FOUND" --version 2>&1)"; then
+  pass "codex 版本：$codex_version"
   pass "codex 路徑：$CODEX_FOUND"
   # 用「原本的 PATH」判斷，腳本自己 export 的不算數
   if printf '%s' "$ORIG_PATH" | tr ':' '\n' | grep -qx "${NPM_PREFIX%/}/bin"; then
@@ -684,20 +687,98 @@ if [ -n "$CODEX_FOUND" ]; then
     note "貼上這行即可：export PATH=\"$HOME/.local/bin:\$PATH\""
   fi
 else
-  fail "驗證失敗：找不到 codex 執行檔"
+  if [ "$MODE" != dry-run ]; then
+    fail "驗證失敗：codex 不存在或無法執行"
+    [ "$MODE" != install ] || exit 1
+  fi
 fi
+
+resolve_gx10() {
+  if [ -z "$GX10_IP" ]; then
+    command -v tailscale >/dev/null 2>&1 || { fail "找不到 tailscale；請確認 VPN 或指定 --gx10-ip"; return 1; }
+    GX10_IP="$(tailscale status --json | node -e '
+      let raw = "";
+      process.stdin.on("data", chunk => raw += chunk);
+      process.stdin.on("end", () => {
+        try {
+          const status = JSON.parse(raw);
+          if (status.BackendState !== "Running") throw new Error("Tailscale 尚未連線");
+          const peers = Object.values(status.Peer || {}).filter(peer =>
+            /gx10/i.test((peer.HostName || "") + " " + (peer.DNSName || "")));
+          if (peers.length !== 1) throw new Error("GX10 數量不是一台，請明確指定 --gx10-ip");
+          if (peers[0].Online === false) throw new Error("GX10 目前離線");
+          const address = (peers[0].TailscaleIPs || []).find(ip => /^100\./.test(ip));
+          if (!address) throw new Error("GX10 沒有 Tailscale IPv4");
+          console.log(address);
+        } catch (error) { console.error(error.message); process.exitCode = 1; }
+      });
+    ')" || { fail "無法唯一識別 GX10，請指定 --gx10-ip"; return 1; }
+  fi
+  node -e '
+    const address = process.argv[1];
+    const parts = address.split(".").map(Number);
+    if (require("net").isIP(address) !== 4 || parts[0] !== 100 || parts[1] < 64 || parts[1] > 127) process.exit(1);
+  ' "$GX10_IP" || { fail "--gx10-ip 必須是 Tailscale IPv4（100.64.0.0/10）"; return 1; }
+  pass "GX10 Tailscale 位址：$GX10_IP:$GX10_PORT"
+}
+
+write_strata_config() {
+  mkdir -p "$CONFIG_HOME" || return 1
+  local config="$CONFIG_HOME/config.toml" backup
+  if [ -e "$config" ]; then
+    backup="$(mktemp "$CONFIG_HOME/config.toml.bak.XXXXXX")" || return 1
+    cp -p "$config" "$backup" || return 1
+    chmod 600 "$backup" || return 1
+    info "原設定已備份至 $backup；本次改用 Strata 設定"
+  fi
+  cat > "$config" <<EOF
+model = "$GX10_MODEL"
+model_provider = "strata"
+model_context_window = 262144
+model_auto_compact_token_limit = 200000
+
+[model_providers.strata]
+name = "Strata GX10"
+base_url = "http://$GX10_IP:$GX10_PORT/v1"
+wire_api = "responses"
+env_key = "STRATA_API_KEY"
+requires_openai_auth = false
+EOF
+  [ "$?" -eq 0 ] || return 1
+  chmod 600 "$config" || return 1
+  pass "已寫入 $config（未讀取或儲存金鑰）"
+}
 
 # ────────────────────────────── 步驟 9：設定檔（選用） ──────────────────────────────
 if [ "$WITH_CONFIG" -eq 1 ]; then
-  step "步驟 9：寫入 ~/.codex/config.toml"
+  step "步驟 9：模型服務設定"
 
-  if [ "$MODE" = "check" ]; then
+  if [ "$PROVIDER" = strata ]; then
+    if [ "$MODE" = dry-run ]; then
+      info "[dry-run] 偵測 Tailscale GX10 → 檢查 /health → 備份並寫入 $CONFIG_HOME/config.toml"
+    else
+      resolve_gx10 || exit 1
+      health_status="$(curl -sS --noproxy '*' --connect-timeout 5 --max-time 10 -o /dev/null -w '%{http_code}' "http://$GX10_IP:$GX10_PORT/health")" || {
+        fail "無法連到 GX10；請檢查 Tailscale、ACL、Strata 監聽位址與連接埠"; exit 1;
+      }
+      case "$health_status" in
+        2??) pass "GX10 /health：HTTP $health_status（僅代表健康檢查通過）" ;;
+        401|403) warn "GX10 回應 HTTP $health_status，需要授權；尚未驗證模型可用" ;;
+        *) fail "GX10 /health：HTTP $health_status，停止設定"; exit 1 ;;
+      esac
+      info "模型名稱：$GX10_MODEL；若伺服器不同，請使用 --model 指定"
+      if [ "$MODE" = install ]; then
+        write_strata_config || { fail "無法寫入 Strata 設定"; exit 1; }
+      fi
+      info "尚未驗證金鑰與 /v1/responses 推論；請在本機設定 STRATA_API_KEY 後測試"
+    fi
+  elif [ "$MODE" = "check" ]; then
     info "[check] 略過寫設定"
   elif [ "$MODE" = "dry-run" ]; then
     info "[dry-run] 將寫入 ~/.codex/config.toml（provider=$PROVIDER）"
   else
-    mkdir -p "$HOME/.codex"
-    CFG="$HOME/.codex/config.toml"
+    mkdir -p "$CONFIG_HOME"
+    CFG="$CONFIG_HOME/config.toml"
     if [ -f "$CFG" ]; then
       cp "$CFG" "$CFG.bak-$(date +%Y%m%d-%H%M%S)"
       pass "已備份原設定到 $CFG.bak-*"
@@ -745,6 +826,12 @@ else
   warn "有 $FAILURES 項失敗、$WARNINGS 項提醒（見上面 FAIL / WARN 標記）"
 fi
 
+if [ "$PROVIDER" = strata ]; then
+  info '目前終端機先執行：export PATH="$HOME/.local/bin:$PATH"'
+  info '安全輸入金鑰（不回顯、不寫入紀錄）：read -rsp "Strata API Key: " STRATA_API_KEY; echo; export STRATA_API_KEY'
+  info '接著執行：codex。此設定不需要 codex login。'
+  info '新終端機需重新設定 STRATA_API_KEY；若伺服器無需認證，請移除設定中的 env_key 行。'
+else
 cat <<'EOF'
 
 下一步：
@@ -760,5 +847,6 @@ cat <<'EOF'
 完整紀錄：見上方 log 檔路徑
 
 EOF
+fi
 
 exit $(( FAILURES > 0 ? 1 : 0 ))
