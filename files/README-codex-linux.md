@@ -1,5 +1,13 @@
 # codex-setup-linux.sh — 一般 Linux 安裝 Codex CLI
 
+## 2026-11-13.3 修正
+
+- NodeSource 設定腳本先下載，再以 sudo 執行；root 則直接執行。
+- 設定、安裝 nodejs、檢查實際 Node 版本與 npm 都成功，才顯示安裝成功。
+- 舊 Node 升級失敗會嘗試使用者層級安裝；最終仍不符合需求則以非零狀態結束，不繼續安裝 Codex CLI。
+- Node 版本不足但已成功修復，不再計入最終失敗數。
+- 使用模擬指令驗證 sudo/root、下載與安裝失敗、假成功、npm 故障及後備流程；未在各 Linux 發行版實機測試。
+
 一鍵完成四件事：**確認環境 → 偵測缺套件 → 補裝套件 → 安裝 Codex CLI**，全程寫 log。
 
 ## 快速開始

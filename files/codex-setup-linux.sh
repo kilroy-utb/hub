@@ -22,7 +22,7 @@
 set -uo pipefail
 
 # ────────────────────────────── 全域設定 ──────────────────────────────
-SCRIPT_VERSION="2026-11-13.1"
+SCRIPT_VERSION="2026-11-13.3"
 SCRIPT_NAME="$(basename "$0")"
 MIN_NODE_MAJOR=16          # Codex CLI 官方最低需求
 RECOMMEND_NODE_MAJOR=18    # 建議版本，低於此會額外提示
@@ -121,7 +121,7 @@ run_shell() {
   else
     printf '  $ %s\n' "$code"
   fi
-  bash -c "$code" 2>&1 | while IFS= read -r line || [ -n "$line" ]; do
+  bash -o pipefail -c "$code" 2>&1 | while IFS= read -r line || [ -n "$line" ]; do
     printf '      %s\n' "$line"
     printf '      %s\n' "$line" >> "$LOG_FILE"
   done
@@ -362,6 +362,12 @@ node_major() {
   node --version 2>/dev/null | sed 's/^v//' | cut -d. -f1
 }
 
+node_ready() {
+  local major
+  major="$(node_major)"
+  [[ "$major" =~ ^[0-9]+$ ]] && [ "$major" -ge "$MIN_NODE_MAJOR" ] && npm --version >/dev/null 2>&1
+}
+
 install_node_from_tarball() {
   # Node.js 官方 tarball —— 不需要 root，安裝到 ~/.local
   local ver url home_dir
@@ -419,7 +425,7 @@ install_node_from_tarball() {
   case "$target_dir" in
     "$HOME"/.local/lib/nodejs/*)
       if [ -e "$target_dir" ]; then
-        mv -f "$target_dir" "${target_dir}.old-$(date +%Y%m%d-%H%M%S)" 2>/dev/null           || rm -rf -- "$target_dir"
+        mv "$target_dir" "${target_dir}.old-$(date +%Y%m%d-%H%M%S)-$$" || return 1
       fi
       ;;
   esac
@@ -432,10 +438,10 @@ install_node_from_tarball() {
   ln -sf "$home_dir/$ver/bin/node" "$HOME/.local/bin/node"
   ln -sf "$home_dir/$ver/bin/npm"  "$HOME/.local/bin/npm"
   ln -sf "$home_dir/$ver/bin/npx"  "$HOME/.local/bin/npx"
-  pass "Node.js $ver 已安裝到 $home_dir/$ver"
   export PATH="$HOME/.local/bin:$PATH"
   hash -r 2>/dev/null || true
-  return 0
+  node_ready || { warn "Node.js 解壓後無法執行或版本不足"; return 1; }
+  pass "Node.js $ver 已安裝到 $home_dir/$ver"
 }
 
 install_node_from_nodesource() {
@@ -452,13 +458,12 @@ install_node_from_nodesource() {
 
   if [ "${HAVE_PRIV:-0}" -ne 1 ]; then
     info "沒有提權權限，改用 tarball 安裝"
-    install_node_from_tarball
-    return $?
+    return 1
   fi
 
   info "使用 NodeSource 安裝 Node.js ${NODE_INSTALL_VERSION}.x"
   if [ "$MODE" = "dry-run" ]; then
-    echo "[dry-run] curl -fsSL $setup_url | bash -"
+    info "[dry-run] 下載 NodeSource 設定腳本，再使用 ${SUDO:-root} 執行並安裝 nodejs"
     return 0
   fi
   if [ "$MODE" = "check" ]; then
@@ -466,13 +471,27 @@ install_node_from_nodesource() {
     return 1
   fi
 
-  if run_shell "curl -fsSL $setup_url | bash -"; then
-    pass "NodeSource 安裝腳本執行完成"
-    run_cmd $SUDO $PKG_INSTALL nodejs || warn "安裝 nodejs 套件時有警告"
-    return 0
+  local setup_file installed_major
+  setup_file="$(mktemp "${TMPDIR:-/tmp}/codex-nodesource.XXXXXX")" || return 1
+  if ! run_cmd curl -fSL --connect-timeout 15 --max-time 120 -o "$setup_file" "$setup_url"; then
+    warn "NodeSource 下載失敗，改用使用者層級安裝"
+    return 1
   fi
-  fail "NodeSource 安裝失敗"
-  return 1
+  if ! run_cmd $SUDO bash "$setup_file"; then
+    warn "NodeSource 設定失敗，改用使用者層級安裝"
+    return 1
+  fi
+  if ! run_cmd $SUDO $PKG_INSTALL nodejs; then
+    warn "nodejs 套件安裝失敗，改用使用者層級安裝"
+    return 1
+  fi
+  hash -r
+  installed_major="$(node_major)"
+  if ! node_ready || [ "$installed_major" -lt "$NODE_INSTALL_VERSION" ]; then
+    warn "NodeSource 執行後 Node.js 仍未達到 $NODE_INSTALL_VERSION，改用使用者層級安裝"
+    return 1
+  fi
+  pass "NodeSource 安裝已驗證：$(node --version)，npm $(npm --version)"
 }
 
 CURRENT_NODE_MAJOR="$(node_major)"
@@ -485,7 +504,7 @@ if command -v node >/dev/null 2>&1; then
       warn "Node 版本低於建議的 $RECOMMEND_NODE_MAJOR，功能可能受限"
     fi
   else
-    fail "Node 版本 $CURRENT_NODE_MAJOR < $MIN_NODE_MAJOR（Codex CLI 官方要求）"
+    warn "Node 版本 $CURRENT_NODE_MAJOR < $MIN_NODE_MAJOR，需要升級"
     if [ "$MODE" = "install" ]; then
       install_node_from_nodesource || install_node_from_tarball
       hash -r 2>/dev/null || true
@@ -493,7 +512,7 @@ if command -v node >/dev/null 2>&1; then
     fi
   fi
 else
-  fail "找不到 node"
+  warn "找不到 node，需要安裝"
   if [ "$MODE" = "install" ]; then
     # 先試套件管理器（若 OS 套件版本夠新），再試 tarball
     if [ -n "$PKG_MANAGER" ] && [ "${HAVE_PRIV:-0}" -eq 1 ]; then
@@ -501,8 +520,8 @@ else
       run_cmd $SUDO $PKG_INSTALL nodejs npm || true
       hash -r 2>/dev/null || true
     fi
-    if ! command -v node >/dev/null 2>&1; then
-      install_node_from_tarball
+    if ! node_ready; then
+      install_node_from_nodesource || install_node_from_tarball
       hash -r 2>/dev/null || true
     fi
     CURRENT_NODE_MAJOR="$(node_major)"
@@ -513,7 +532,7 @@ fi
 if command -v npm >/dev/null 2>&1; then
   pass "npm：$(npm --version)"
 else
-  fail "找不到 npm"
+  warn "找不到 npm，需要安裝"
   if [ "$MODE" = "install" ] && [ -n "$PKG_MANAGER" ] && [ "${HAVE_PRIV:-0}" -eq 1 ]; then
     info "嘗試安裝 npm……"
     run_cmd $SUDO $PKG_INSTALL npm || true
@@ -522,8 +541,19 @@ else
   if command -v npm >/dev/null 2>&1; then
     pass "npm 補裝完成：$(npm --version)"
   else
-    fail "npm 仍然找不到，Codex CLI 無法安裝"
+    warn "npm 仍然找不到，將檢查 Node.js/npm 環境"
   fi
+fi
+
+if [ "$MODE" = "install" ] && ! node_ready; then
+  fail "Node.js/npm 尚未就緒，停止安裝 Codex CLI。完整紀錄：$LOG_FILE"
+  exit 1
+elif [ "$MODE" = "check" ] && ! node_ready; then
+  fail "Node.js/npm 尚未符合安裝需求"
+elif [ "$MODE" = "dry-run" ] && ! node_ready; then
+  info "[dry-run] 正式安裝時會補裝或升級 Node.js/npm；驗證通過才安裝 Codex CLI"
+elif node_ready; then
+  pass "Node.js/npm 驗證通過：$(node --version) / $(npm --version)"
 fi
 
 # ────────────────────────────── 步驟 6：npm 前綴 ──────────────────────────────
