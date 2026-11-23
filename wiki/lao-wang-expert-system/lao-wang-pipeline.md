@@ -1,4 +1,4 @@
-# 資料管線（step0–step10）與重現指令
+# 資料管線（step0–step13）與重現指令
 
 原始 repo（未公開）：`~/codex/lao_wang_channel`。下面每一階都對應一個可重跑的腳本，輸出都是 CSV/JSON，沒有手工步驟（除標注外）。
 
@@ -8,16 +8,19 @@
 |---|---|---|---|---|---|
 | 0 目錄 | `step0_metadata.py` | 頻道 id | `catalog.csv/.json`（2,639 支：id、標題、類型、長度、觀看、播放清單、標題日期）、`availability.tsv` | 數秒 | 完成 |
 | 1 抓音訊 | `step1_fetch_audio.py` | id 清單 | `audio/<id>.m4a`＋`fetch_manifest.jsonl` | 單集 45–47MB、約 5 秒；全系列 892 集 ≈40GB | 完成 |
-| 2 ASR | `step2_asr.py`（faster-whisper `small` int8，CPU 6 執行緒） | m4a | `transcripts/<id>.txt/.json` | RTF 0.128 → 單集 49 分鐘音訊 6.3 分鐘；全系列 ≈70 CPU 小時 | 進行中（685/892） |
+| 2 ASR | `step2_asr.py`（faster-whisper `small` int8，CPU 6 執行緒） | m4a | `transcripts/<id>.txt/.json` | RTF 0.128 → 單集 49 分鐘音訊 6.3 分鐘；全系列 ≈70 CPU 小時 | 進行中（722/892） |
 | 2b 名稱修復 | `step2b_name_repair.py` | txt＋`ticker_map.json` | `<id>.fixed.txt`＋repair log | 秒級 | 完成（ASR 把「力積電／南亞科／友達／富喬」整批漏識） |
 | 3 摘要 | `step3_digest.py` | transcripts | `digests/<id>.digest.txt`＋signals.json | 單集壓到 ≈1.7k 字 | 完成（單集驗證） |
 | 4 台帳（舊） | `step4_strategy_ledger.py` | digests | `ledger_3min.csv` | — | 方向判定不可靠，`score()` 引用不存在的欄位 → 已停用，僅供歷史 |
 | 5 規則引擎＋回測 | `step5_rule_engine.py`（`fetch`/`backtest`/`sweep`） | RULES_SPEC 參數＋Yahoo 復權 | `data/BACKTEST_REPORT.md`、`ablation_*.csv`、`sweep_*.csv`、`data/px/*.csv` | 24 檔抓價 ≈1 分鐘；回測秒級；36 組掃描 ≈1 分鐘 | 完成 |
-| 6 字幕抓取 | `step6_captions.py` | 頻道 id | `captions/<頻道>/<vid>.txt`、`.info.json`、`.desc.txt`、`index.csv` | 有字幕的頻道抽取近零成本（三家各 150–250 支 ≈ 數分鐘） | 完成（三家） |
+| 6 字幕抓取 | `step6_captions.py`（`--auto-subs` 可收 YouTube 自動字幕） | 頻道 id | `captions/<頻道>/<vid>.txt`、`.info.json`、`.desc.txt`、`index.csv` | 人工字幕近零成本；自動字幕同樣近零（87 支 ≈3 分鐘） | 完成（五家：陳昆仁/朱家泓/學吧/財女珍妮/游庭皓） |
 | 7 跨家台帳 | `step7_ledger_captions.py` | captions | `ledger_captions.csv`（含 `expert`/`program`/`when`） | 秒級 | 完成，但方向精確度 ≈36% |
 | 8 用語指紋 | `step8_fingerprint.py` | transcripts＋captions | `data/style_fingerprint.csv`＋立場相關、重疊一致性 | ≈2 分鐘 | 完成 |
 | 9 規則飽和度 | `step9_rule_saturation.py` | 全部逐字稿 | `data/rule_saturation.csv`＋報告 txt | ≈20 秒 | 完成 |
 | 10 喊單評核 | `step10_evaluate_calls.py` | 任一 ledger＋價格 | `data/call_eval.csv`、`call_quality.csv`＋P&L 相關矩陣 | 首次抓 200+ 檔價格 ≈20 分鐘，之後快取 | 完成 |
+| 11 總經詞族與傳導句 | `step11_macro_map.py` | transcripts | `data/macro_map.csv`、`data/macro_transmission.csv`（含原文片段，不發布） | ≈15 秒 | 完成 |
+| 12 宏觀閘門回測 | `step12_macro_gate.py`（嚴格落後的 ^IXIC/^SOX/^GSPC/^VIX/DXY/^TNX/TWD=X/CL=F） | 同一個 `fetch` 快取 | `data/macro_gate.csv` | ≈40 秒（含抓價） | 完成 |
+| 13 宏觀方向言論評核 | `step13_macro_calls.py` | step11 輸出＋^TWII | `data/macro_calls_eval.csv` | 秒級 | 完成（關鍵詞層級，只讀方向） |
 
 ## 重現指令
 
@@ -29,8 +32,14 @@ python3 pipeline/step5_rule_engine.py fetch      # 抓復權價格到 data/px/
 python3 pipeline/step5_rule_engine.py backtest   # 主結果＋消融
 python3 pipeline/step5_rule_engine.py sweep      # 36 組參數掃描
 
+# 總經層
+python3 pipeline/step11_macro_map.py --folds 8 --samples 14
+python3 pipeline/step12_macro_gate.py
+python3 pipeline/step13_macro_calls.py
+
 # 字幕頻道（抽取近零成本）
-python3 pipeline/step6_captions.py --channel <channel_id> --name <頻道名> --limit 250
+python3 pipeline/step6_captions.py --cid <channel_id> --name <頻道名> --limit 250
+python3 pipeline/step6_captions.py --cid <channel_id> --name <頻道名> --auto-subs   # 只有 YouTube 自動字幕的頻道
 python3 pipeline/step7_ledger_captions.py         # → ledger_captions.csv
 python3 pipeline/step8_fingerprint.py             # → data/style_fingerprint.csv
 python3 pipeline/step9_rule_saturation.py --folds 8
@@ -55,6 +64,10 @@ python3 pipeline/step10_evaluate_calls.py --ledger ledger_captions.csv --horizon
 9. **沙盒裡的背景行程會被回收**：長時間的 ASR／抓取要用前台 exec ＋ 輪詢，不能 `nohup &`。
 10. **`pkill -f step6` 會自我匹配到沙盒 wrapper**，要用 `pkill -f '[s]tep6'`。
 11. **cluster bootstrap 要按日期（或 股票×月份）分群**：同一天的喊單共用同一個市場結果，按筆數 bootstrap 會讓信賴區間假狹窄。
+12. **外盤變數必須嚴格落後**：台股 09:00–13:30 開盤、美股收盤在台北 21:30。舊版用同一日曆日對齊 → 前視偏差（已修，主結果全部重跑）。跨市場變數一律用「較早的上一個外盤交易日」。
+13. **旗標要確認真的接到邏輯上**：`use_us_gate` 定義了但 `entry_signal` 無條件 `cond &= us_state` → 消融表出現「加閘門＝幾乎不 binding」的假結論。與第 5 條（`STOP` 黑名單定義了卻沒用）是同一類錯誤：**定義不等地使用**。
+14. **YouTube 自動字幕可用 `--write-auto-subs` 取得**（`zh-Hant` 在 automatic_captions 裡），品質低於人工字幕（無標點）但足夠做詞族統計；`subtitles` 與 `automatic_captions` 要分開檢查，否則會把有自動字幕的頻道誤判為「無字幕」。
+15. **檔案名以 `-` 開頭時 `ls *.vtt` 會把它當選項**，計數變 0 → 用 `ls -- .` 或 python glob。
 
 ## 名義與合規
 

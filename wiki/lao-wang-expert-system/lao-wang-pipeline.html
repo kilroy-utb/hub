@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>資料管線與重現指令 — Kilroy's Hub</title>
-  <meta name="description" content="step0–step10 的輸入輸出、成本、指令、踩過的坑">
+  <meta name="description" content="step0–step13 的輸入輸出、成本、指令、踩過的坑">
   <style>
     :root {
       --bg: #ffffff;
@@ -156,7 +156,7 @@
       <a href="./">老王 TA 專家系統</a> ›
       <span>資料管線與重現指令</span>
     </nav>
-<h1>資料管線（step0–step10）與重現指令</h1>
+<h1>資料管線（step0–step13）與重現指令</h1>
 <p>原始 repo（未公開）：<code>~/codex/lao_wang_channel</code>。下面每一階都對應一個可重跑的腳本，輸出都是 CSV/JSON，沒有手工步驟（除標注外）。</p>
 <h2>管線表</h2>
 <table>
@@ -193,7 +193,7 @@
 <td>m4a</td>
 <td><code>transcripts/&lt;id&gt;.txt/.json</code></td>
 <td>RTF 0.128 → 單集 49 分鐘音訊 6.3 分鐘；全系列 ≈70 CPU 小時</td>
-<td>進行中（685/892）</td>
+<td>進行中（722/892）</td>
 </tr>
 <tr>
 <td>2b 名稱修復</td>
@@ -229,11 +229,11 @@
 </tr>
 <tr>
 <td>6 字幕抓取</td>
-<td><code>step6_captions.py</code></td>
+<td><code>step6_captions.py</code>（<code>--auto-subs</code> 可收 YouTube 自動字幕）</td>
 <td>頻道 id</td>
 <td><code>captions/&lt;頻道&gt;/&lt;vid&gt;.txt</code>、<code>.info.json</code>、<code>.desc.txt</code>、<code>index.csv</code></td>
-<td>有字幕的頻道抽取近零成本（三家各 150–250 支 ≈ 數分鐘）</td>
-<td>完成（三家）</td>
+<td>人工字幕近零成本；自動字幕同樣近零（87 支 ≈3 分鐘）</td>
+<td>完成（五家：陳昆仁/朱家泓/學吧/財女珍妮/游庭皓）</td>
 </tr>
 <tr>
 <td>7 跨家台帳</td>
@@ -267,6 +267,30 @@
 <td>首次抓 200+ 檔價格 ≈20 分鐘，之後快取</td>
 <td>完成</td>
 </tr>
+<tr>
+<td>11 總經詞族與傳導句</td>
+<td><code>step11_macro_map.py</code></td>
+<td>transcripts</td>
+<td><code>data/macro_map.csv</code>、<code>data/macro_transmission.csv</code>（含原文片段，不發布）</td>
+<td>≈15 秒</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>12 宏觀閘門回測</td>
+<td><code>step12_macro_gate.py</code>（嚴格落後的 ^IXIC/^SOX/^GSPC/^VIX/DXY/^TNX/TWD=X/CL=F）</td>
+<td>同一個 <code>fetch</code> 快取</td>
+<td><code>data/macro_gate.csv</code></td>
+<td>≈40 秒（含抓價）</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>13 宏觀方向言論評核</td>
+<td><code>step13_macro_calls.py</code></td>
+<td>step11 輸出＋^TWII</td>
+<td><code>data/macro_calls_eval.csv</code></td>
+<td>秒級</td>
+<td>完成（關鍵詞層級，只讀方向）</td>
+</tr>
 </tbody>
 </table>
 <h2>重現指令</h2>
@@ -277,8 +301,14 @@ python3 pipeline/step5_rule_engine.py fetch      # 抓復權價格到 data/px/
 python3 pipeline/step5_rule_engine.py backtest   # 主結果＋消融
 python3 pipeline/step5_rule_engine.py sweep      # 36 組參數掃描
 
+# 總經層
+python3 pipeline/step11_macro_map.py --folds 8 --samples 14
+python3 pipeline/step12_macro_gate.py
+python3 pipeline/step13_macro_calls.py
+
 # 字幕頻道（抽取近零成本）
-python3 pipeline/step6_captions.py --channel &lt;channel_id&gt; --name &lt;頻道名&gt; --limit 250
+python3 pipeline/step6_captions.py --cid &lt;channel_id&gt; --name &lt;頻道名&gt; --limit 250
+python3 pipeline/step6_captions.py --cid &lt;channel_id&gt; --name &lt;頻道名&gt; --auto-subs   # 只有 YouTube 自動字幕的頻道
 python3 pipeline/step7_ledger_captions.py         # → ledger_captions.csv
 python3 pipeline/step8_fingerprint.py             # → data/style_fingerprint.csv
 python3 pipeline/step9_rule_saturation.py --folds 8
@@ -302,6 +332,10 @@ python3 pipeline/step10_evaluate_calls.py --ledger ledger_captions.csv --horizon
 <li><strong>沙盒裡的背景行程會被回收</strong>：長時間的 ASR／抓取要用前台 exec ＋ 輪詢，不能 <code>nohup &amp;</code>。</li>
 <li><strong><code>pkill -f step6</code> 會自我匹配到沙盒 wrapper</strong>，要用 <code>pkill -f '[s]tep6'</code>。</li>
 <li><strong>cluster bootstrap 要按日期（或 股票×月份）分群</strong>：同一天的喊單共用同一個市場結果，按筆數 bootstrap 會讓信賴區間假狹窄。</li>
+<li><strong>外盤變數必須嚴格落後</strong>：台股 09:00–13:30 開盤、美股收盤在台北 21:30。舊版用同一日曆日對齊 → 前視偏差（已修，主結果全部重跑）。跨市場變數一律用「較早的上一個外盤交易日」。</li>
+<li><strong>旗標要確認真的接到邏輯上</strong>：<code>use_us_gate</code> 定義了但 <code>entry_signal</code> 無條件 <code>cond &amp;= us_state</code> → 消融表出現「加閘門＝幾乎不 binding」的假結論。與第 5 條（<code>STOP</code> 黑名單定義了卻沒用）是同一類錯誤：<strong>定義不等地使用</strong>。</li>
+<li><strong>YouTube 自動字幕可用 <code>--write-auto-subs</code> 取得</strong>（<code>zh-Hant</code> 在 automatic_captions 裡），品質低於人工字幕（無標點）但足夠做詞族統計；<code>subtitles</code> 與 <code>automatic_captions</code> 要分開檢查，否則會把有自動字幕的頻道誤判為「無字幕」。</li>
+<li><strong>檔案名以 <code>-</code> 開頭時 <code>ls *.vtt</code> 會把它當選項</strong>，計數變 0 → 用 <code>ls -- .</code> 或 python glob。</li>
 </ol>
 <h2>名義與合規</h2>
 <ul>

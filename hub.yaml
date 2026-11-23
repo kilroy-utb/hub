@@ -44,7 +44,7 @@ sections:
 
   - title: "老王 TA 專家系統"
     icon: "📈"
-    desc: "從【老王不只三分鐘】892 集蒸餾的進出場規則、11 年回測、規則飽和度稽核與多專家相關性"
+    desc: "從【老王不只三分鐘】892 集蒸餾的進出場規則與總經閘門、11 年回測、飽和度稽核與多專家相關性"
     type: wiki
     url: "https://kilroy-utb.github.io/hub/wiki/lao-wang-expert-system/"
     badge_source:

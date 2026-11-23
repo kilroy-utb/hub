@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>總經層知識庫 — Kilroy's Hub</title>
+  <meta name="description" content="宏觀詞族傳導密度、可編碼閘門（外盤/事件/資金面）、被資料反駁的六條傳導、對投票機制的含義">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>總經層知識庫</span>
+    </nav>
+<h1>總經（宏觀）層知識庫：她的宏觀內容能變成什麼</h1>
+<p>她确实大量談總經，但<strong>談得多不等於她的操作依賴它</strong>。這一頁把 721 集逐字稿裡的總經內容分成三層：可編碼且已驗證、可編碼但被資料反駁、純敘事。</p>
+<p>資料：721 集 ASR（2021-07-02 → 2026-11-20，約 1,980 萬字）；價格：Yahoo 日線 2015-01-05 → 2026-11-20（2,886 交易日）。
+腳本：<code>step11_macro_map.py</code>（詞族與傳導句盤點）、<code>step12_macro_gate.py</code>（閘門回測）、<code>step13_macro_calls.py</code>（她的宏觀方向言論 vs 同期基準率）。規格檔：<code>pipeline/MACRO_SPEC.md</code>。</p>
+<h2>關鍵度量：傳導密度</h2>
+<p>「傳導句」＝總經詞 ±150 字內同時出現「市場標的」與「判斷／行動詞」。下表是每 1,000 次提及產生幾句傳導，這是判斷「能不能編碼」的最重要單一指標。</p>
+<table>
+<thead>
+<tr>
+<th>詞族</th>
+<th>提及</th>
+<th>集數覆蓋率</th>
+<th>傳導句</th>
+<th><strong>密度(句/1k)</strong></th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>台股資金面（外資/投信/自營/期貨空單/融資）</td>
+<td>14,941</td>
+<td>81.0%</td>
+<td>978</td>
+<td><strong>65.5</strong></td>
+<td>可編碼</td>
+</tr>
+<tr>
+<td>美股/外盤（納指/費半/道瓊/標普）</td>
+<td>9,541</td>
+<td>90.8%</td>
+<td>768</td>
+<td><strong>80.5</strong></td>
+<td>可編碼</td>
+</tr>
+<tr>
+<td>發布/事件日历（財報季/公布日/調整日）</td>
+<td>9,879</td>
+<td>98.1%</td>
+<td>460</td>
+<td>46.6（53.7% 帶明確時間）</td>
+<td>當窗口，不當方向</td>
+</tr>
+<tr>
+<td>匯率/美元</td>
+<td>1,291</td>
+<td>21.2%</td>
+<td>63</td>
+<td>48.8</td>
+<td>已測，見 T2</td>
+</tr>
+<tr>
+<td>關稅/貿易</td>
+<td>1,744</td>
+<td>29.4%</td>
+<td>55</td>
+<td>31.5</td>
+<td>事件可編碼、立場不可</td>
+</tr>
+<tr>
+<td>原物料/油</td>
+<td>2,051</td>
+<td>33.7%</td>
+<td>58</td>
+<td>28.3</td>
+<td>已測，見 T2</td>
+</tr>
+<tr>
+<td>經濟成長/景氣</td>
+<td>4,088</td>
+<td>62.6%</td>
+<td>69</td>
+<td>16.9</td>
+<td>敘事</td>
+</tr>
+<tr>
+<td>中國/亞洲</td>
+<td>2,409</td>
+<td>44.0%</td>
+<td>43</td>
+<td>17.8</td>
+<td>敘事</td>
+</tr>
+<tr>
+<td>債券/殖利率</td>
+<td>1,404</td>
+<td>23.9%</td>
+<td>24</td>
+<td>17.1</td>
+<td>敘事（部分可編碼）</td>
+</tr>
+<tr>
+<td>聯準會/利率</td>
+<td>10,963</td>
+<td>68.8%</td>
+<td>138</td>
+<td><strong>12.6</strong></td>
+<td>敘事</td>
+</tr>
+<tr>
+<td>地緣/政治</td>
+<td>2,934</td>
+<td>43.1%</td>
+<td>33</td>
+<td>11.2</td>
+<td>敘事</td>
+</tr>
+<tr>
+<td>通膨/CPI</td>
+<td>4,395</td>
+<td>42.3%</td>
+<td>36</td>
+<td><strong>8.2</strong></td>
+<td>敘事</td>
+</tr>
+<tr>
+<td>就業/薪資</td>
+<td>2,785</td>
+<td>33.8%</td>
+<td>14</td>
+<td><strong>5.0</strong></td>
+<td>敘事</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>82.7% 的集數至少有 1 句傳導句，但只有 <strong>37.5%</strong> 帶明確時間範圍 → 多數宏觀言論無法被驗證。</li>
+<li><strong>联準會是她第二大詞族（10,963 次、68.8% 的集數都談），但傳導密度只有外盤的 1/6</strong> → 「她談 Fed」與「她的進出場依賴 Fed」是兩件事。</li>
+<li>詞族漂移（前三折 vs 後三折）：關稅/貿易 3.77×、地緣 2.77× ＝ 2025 關稅 regime 的新題材；通膨 0.69×、就業 0.91× 收斂。與 <a href="lao-wang-audit.html">飽和度稽核</a> 的結論一致：新詞是題材，不是新規則。</li>
+</ul>
+<h2>T1 可編碼、已驗證 → 建議進入引擎</h2>
+<h3>G1 外盤均線閘門（她宏觀層唯一穩健通過回測的一條）</h3>
+<p>原話（2021-09-17）：「短線要看到納斯達克繼續的翻多的反彈，那所有的均線都要站上去，包括這一條十日均線」。</p>
+<p>實作要點：美股收盤在台北 21:30，只能用於<strong>下一個</strong>台股交易日 → 嚴格取較早的美股收盤（這個對齊方式本身修正了舊版的前視偏差，見 <a href="lao-wang-backtest.html">回測報告</a>）。</p>
+<table>
+<thead>
+<tr>
+<th>條件（外盤皆為前一交易日收盤）</th>
+<th>ON 天數</th>
+<th>ON 平均</th>
+<th>OFF 天數</th>
+<th>OFF 平均</th>
+<th>差</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>納指&gt;MA10 → 台股次日</td>
+<td>1,788</td>
+<td>+8.3bp</td>
+<td>1,097</td>
+<td>+0.7bp</td>
+<td><strong>+7.6bp</strong></td>
+</tr>
+<tr>
+<td>納指&gt;MA20 → 台股次日</td>
+<td>1,894</td>
+<td>+9.4bp</td>
+<td>991</td>
+<td>−2.2bp</td>
+<td><strong>+11.6bp</strong></td>
+</tr>
+<tr>
+<td>費半&gt;MA20 → 台股次日</td>
+<td>1,780</td>
+<td>+9.1bp</td>
+<td>1,105</td>
+<td>−0.6bp</td>
+<td><strong>+9.7bp</strong></td>
+</tr>
+<tr>
+<td>費半&gt;MA20 → 台股 5 日</td>
+<td>1,780</td>
+<td>+40.3bp</td>
+<td>1,101</td>
+<td>+10.1bp</td>
+<td><strong>+30.2bp</strong></td>
+</tr>
+<tr>
+<td>納指且費半&gt;MA10 → 次日</td>
+<td>1,526</td>
+<td>+9.1bp</td>
+<td>1,359</td>
+<td>+1.2bp</td>
+<td>+7.9bp</td>
+</tr>
+</tbody>
+</table>
+<p>套在個股規則上（24 檔、含成本）：進場 424→353 筆，每筆超額 <strong>+1.83%→+2.06%</strong>，maxDD <strong>−9.3%→−6.6%</strong>，曝險 6.3%→5.2%，但 CAGR 3.54%→2.95%。
+<strong>判讀</strong>：這條閘門的價值在「少回撤」而不是「多賺」→ 定位成風控／部位縮放層，不是 alpha 來源。</p>
+<h3>G2 事件日历（當窗口，不當方向）</h3>
+<p>原話（2022-05-31）：「今天是權值股（指數）調整的最後一天…通常外資又在反向，今天拉股票明天再把股票賣出來…明天早盤可能會吐回來」。指數調整日是公開固定日程 → 可日曆化，<strong>尚未回測</strong>。
+財報/公布日相關言論的 horizon 明確率 53.7%，是她所有宏觀語言中最高的一類 → 適合當「不新進場／縮部位」的窗口。</p>
+<h3>G3 資金面閘門（密度最高，資料還沒接）</h3>
+<p>她的說法已經是可驗證的條件句：「只要投信繼續買超，不能賣超…一賣超是不是做一個回檔」（2022-08-16）、「投信如果持續買超，短線股價就還能繼續往上」（2025-01-14）。她也會自己反駁直覺用法：「外資在期貨市場持續進空單第七天…為什麼台股還是跌不下去」（2023-12-01）。
+輸入是公開資料（三大法人每日買賣超、臺指期外資空單、融資融券餘額）→ <strong>這是整個宏觀層下一步最高報酬的工作</strong>，因為它同時補上她 TA 層最大的缺口（籌碼層，見 <a href="lao-wang-multi-expert.html">多專家頁</a>）。</p>
+<h2>T2 可編碼，但資料反駁了她（保留作反面教材，不得進入投票）</h2>
+<table>
+<thead>
+<tr>
+<th>她的說法</th>
+<th>檢驗</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>台幣貶值 → 出口/半導體獲利有利</td>
+<td>半導體(2330/2317/2454/2357) − 金融(2801/2809/2812) 的 20 日相對報酬 vs USD/TWD 20 日變化</td>
+<td><strong>反向</strong>：貶值組 +12.0bp vs 未貶值組 +110.8bp（差 −98.7bp）</td>
+</tr>
+<tr>
+<td>（同一批內容裡她也給反向因果）「台幣貶值 → 外資要匯錢出去 → 外資賣出台股」</td>
+<td>大盤 20 日 vs USD/TWD 20 日上升</td>
+<td>貶值組 +96.9bp vs +146.1bp → <strong>匯出效應勝出</strong>，她的第二條因果才對得上資料</td>
+</tr>
+<tr>
+<td>國際油價大漲 → 石化連動（她自己也加註「不會是 daily」）</td>
+<td>石化(1301/1303/1701) − 大盤 5/20 日 vs WTI 20 日變化</td>
+<td><strong>反向</strong>：fwd5d −12.9bp vs +29.2bp</td>
+</tr>
+<tr>
+<td>美元指數轉強 → 資金緊縮利空</td>
+<td>大盤 fwd5d/20d vs DXY 20 日變化</td>
+<td><strong>成立</strong>：+20.0/+76.3bp vs +38.1/+168.4bp → 唯一在指數層成立的宏觀直覺</td>
+</tr>
+<tr>
+<td>10 年期公債殖利率飆升 → 科技股估值修正</td>
+<td>大盤 vs ^TNX 20 日變化</td>
+<td>不一致（fwd5d 成立、fwd20d 反向）→ 降為 watch</td>
+</tr>
+<tr>
+<td>高波動＝危險／先觀望</td>
+<td>大盤 vs VIX&gt;20</td>
+<td><strong>反向</strong>：fwd5d +70.6 vs +11.7bp、fwd20d +239.9 vs +72.4bp。與 TA 層「出場語言不能當做空訊號」是同一類錯誤</td>
+</tr>
+</tbody>
+</table>
+<h2>T3 純敘事（只當背景閱讀，不進入任何統計或投票）</h2>
+<p>聯準會（12.6/1k）、通膨（8.2）、就業（5.0）、地緣（11.2）、經濟成長（16.9）、中國/亞洲（17.8）。</p>
+<p>把她的宏觀方向言論（含近期用詞）對照同期大盤基準率：
+- <strong>看多言論之後大盤並沒有跑贏基準</strong>：資金面 near-BULL −32.4bp、事件日历 near-BULL −118.3bp、外盤 near-BULL +11.6bp。
+- <strong>看空言論之後確實跑輸</strong>：資金面 near-BEAR −96.0bp、外盤 near-BEAR −31.3bp、事件日历 near-BEAR −64.1bp（3/3 詞族符號一致）。
+- 抽取是關鍵詞層級（同類抽取器人工複核只有 ≈36% 精確度）→ 只讀方向、不讀絕對值。<strong>她的宏觀語言帶有規避風險的訊息，不帶看多的訊息。</strong></p>
+<h2>對專家系統的設計含義</h2>
+<ol>
+<li>宏觀層是<strong>閘門／部位縮放層</strong>，不是投票者。G1（外盤均線）＋G3（法人資金）兩條就足以改變回撤結構。</li>
+<li>不要用她的 Fed/CPI/就業語言生成訊號：那兩萬多次提及幾乎不接到行動，而且只有 37.5% 帶可驗證的 horizon。</li>
+<li>宏觀語言當<strong>反證來源</strong>同樣有價值：T2 那六條是她觀眾最熟悉、却在資料裡站不住的說法。知識庫要留著，避免後續模型把敘事誤當規則。</li>
+<li>需要新增的輸入：三大法人/投信每日買賣超、臺指期外資空單、融資融券餘額、MSCI/富時調整日、財報日。已經可用：<code>^TWII ^IXIC ^SOX ^GSPC ^VIX DX-Y.NYB ^TNX TWD=X CL=F</code>。</li>
+</ol>
+<h2>限制</h2>
+<ul>
+<li>單變量檢定，未做多因素回歸與同族群中性化；族群 basket 只有 3–4 檔。</li>
+<li>同時檢驗約 20 個閘門，未做多重檢定校正；5/20 日觀測重疊已用 21 天移動區塊 bootstrap 處理。</li>
+<li>ASR 逐字稿專有名詞有錯（「公債值一率」＝公債殖利率），詞族匹配有漏有誤；「傳導句」是同段共現，不等於因果歸因。</li>
+<li>樣本只覆蓋 2021–2026 一個世代（低利率→升息→AI），詞族漂移（關稅 3.77×）本身就是 regime 變動證據。</li>
+</ul>
+<h2>資料檔案</h2>
+<p><a href="data/macro_map.csv"><code>data/macro_map.csv</code></a>（詞族覆蓋率與漂移）、<a href="data/macro_gate.csv"><code>data/macro_gate.csv</code></a>（閘門前後瞻報酬與區塊 bootstrap 區間）、<a href="data/macro_calls_eval.csv"><code>data/macro_calls_eval.csv</code></a>（宏觀方向言論 vs 基準率）。含原文片段的 <code>macro_transmission.csv</code> 屬轉錄內容，不發布。</p>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

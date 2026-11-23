@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>知識庫入口與六大結論 — Kilroy's Hub</title>
+  <title>知識庫入口與七大結論 — Kilroy's Hub</title>
   <meta name="description" content="專案是什麼、資料來源、最重要的六個結論、文件清單、免責">
   <style>
     :root {
@@ -154,23 +154,24 @@
       <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
       <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
       <a href="./">老王 TA 專家系統</a> ›
-      <span>知識庫入口與六大結論</span>
+      <span>知識庫入口與七大結論</span>
     </nav>
 <h1>老王 TA 專家系統 — 知識庫入口</h1>
 <p>把 YouTube 財經頻道【老王不只三分鐘】的技術分析內容，蒸餾成<strong>可回測、可反駁</strong>的規則引擎，並評估多頻道「投票／辯論」機制的可行性。</p>
 <ul>
 <li>頻道：老王愛說笑（<code>@oldwangstock</code>，約 609k 訂閱，全系列 2,639 支影片／約 1,399 小時）</li>
-<li>工作系列：【老王不只三分鐘】892 集；逐字稿（ASR）已完成 688 集、約 1,780 萬字。本知識庫的統計樣本為 <strong>685 集</strong>（2021-11-09 → 2026-11-20，含 2022 空頭、2025 關稅衝擊、2026 修正）</li>
+<li>工作系列：【老王不只三分鐘】892 集；逐字稿（ASR）已完成 722 集、約 1,980 萬字。本知識庫的統計樣本為 <strong>721 集</strong>（2021-07-02 → 2026-11-20，含 2022 空頭、2025 關稅衝擊、2026 修正；規則飽和度分析仍以 685 集為準）</li>
 <li>原始資料與程式碼在本機 <code>~/codex/lao_wang_channel</code>（未公開逐字稿，僅公開彙總與分析輸出）</li>
 </ul>
-<h2>目前最重要的六個結論</h2>
+<h2>目前最重要的七個結論</h2>
 <ol>
-<li><strong>她的進場濾網有統計價值</strong>：2015–2026、24 檔、含成本，353 筆交易平均每筆超額 <strong>+1.78%</strong>（95%CI +1.19%～+4.52% 的毛報酬區間）、PF 1.92、maxDD −7.9%。完全拿掉進場條件、只留她的出場 → 9,861 筆、每筆 <strong>−0.04%</strong>、maxDD −74.6%。價值來自「挑什麼時點進場」，不是「挑哪檔」。</li>
-<li><strong>win-rate 會誤殺這套系統</strong>：命中率 41.9% 低於同期無條件基準 53.7%（edge −11.8pp），但獲利因子 1.92。她的結構是低勝率、右偏、靠尾部大行情（她自己的說法是「海闊天空」）。用勝率當 KPI 會把正報酬的規則砍掉。</li>
+<li><strong>她的進場濾網有統計價值</strong>：2015–2026、24 檔、含成本，424 筆交易平均每筆超額 <strong>+1.83%</strong>（毛報酬 95%CI +1.13%～+4.23%）、PF 1.95、maxDD −9.3%。完全拿掉進場條件、只留她的出場 → 17,658 筆、每筆 <strong>−0.31%</strong>、maxDD −98.2%。價值來自「挑什麼時點進場」，不是「挑哪檔」。</li>
+<li><strong>win-rate 會誤殺這套系統</strong>：命中率 42.0% 低於同期無條件基準 53.7%（edge −11.7pp），但獲利因子 1.95。她的結構是低勝率、右偏、靠尾部大行情（她自己的說法是「海闊天空」）。用勝率當 KPI 會把正報酬的規則砍掉。</li>
 <li><strong>規則目錄已飽和</strong>：685 集重驗，前 85 集就出現全部 19 個規則 probe，之後 600 集沒有任何新規則家族；99.1% 的集數至少命中一條已編目規則。再轉更多集不會帶來新規則。</li>
 <li><strong>她的語言裡「三條短期均線站上」不是獨立條件</strong>：突破 N 個月波段高在數學上必然已在短／中均線之上，回測結果完全相同。真正有辨識力的只有 突破波段高、爆量、缺口、均線出場 四類。</li>
 <li><strong>「賣」不能當成做空訊號評鑑</strong>：以喊單層做統計，老王的 long 喊單 10 日超額 +0.35%，short／減碼喊單方向化後 −1.03%（即她喊賣之後股票反而跑贏）。出場規則的價值在降低回撤，不在預測下跌 10 天。</li>
 <li><strong>多專家投票的瓶頸不是投票機制，是擷取品質</strong>：規則式喊單抽取的人工複核精確度只有 <strong>約 36%</strong>（14 筆抽檢）。任何投票／辯論架构在上游 36% 的輸入上，產出不可能超過這個真實度上限。</li>
+<li><strong>她的總經內容 8 成是敘事、2 成是可編碼閘門</strong>：联準會是她第二大詞族（10,963 次提及）但傳導密度只有外盤的 1/6；唯一穩健通過回測的是「納指＋費半站上均線」的外盤閘門（加上後每筆超額 +1.83%→+2.06%、maxDD −9.3%→−6.6%）。她常講的「台幣貶值→出口族群有利」、「油價→石化連動」在資料裡是<strong>反向</strong>的。總經層應該做成大盤 gate／部位縮放，不是投票者。</li>
 </ol>
 <h2>文件清單</h2>
 <table>
@@ -202,13 +203,17 @@
 <td>頻道篩檢、用語指紋、P&amp;L 相關矩陣、對投票機制的設計結論</td>
 </tr>
 <tr>
+<td><a href="lao-wang-macro.html">總經層知識庫</a></td>
+<td>宏觀詞族的傳導密度、可編碼閘門（外盤/事件/資金面）、被她講錯的六條傳導、對投票機制的含義</td>
+</tr>
+<tr>
 <td><a href="lao-wang-pipeline.html">資料管線</a></td>
 <td>step0–step10 的輸入輸出、成本、重現指令、踩過的坑</td>
 </tr>
 </tbody>
 </table>
 <h2>資料檔案</h2>
-<p><code>sweep_rule_engine.csv</code>（36 組參數掃描）、<code>ablation_rule_engine.csv</code>（消融）、<code>rule_saturation.csv</code>（規則出話率）、<code>style_fingerprint.csv</code>（頻道用語指紋）、<code>call_quality.csv</code>（各家喊單統計）放在本目錄 <code>data/</code>。</p>
+<p><code>sweep_rule_engine.csv</code>（36 組參數掃描）、<code>ablation_rule_engine.csv</code>（消融）、<code>rule_saturation.csv</code>（規則出話率）、<code>style_fingerprint.csv</code>（頻道用語指紋）、<code>call_quality.csv</code>（各家喊單統計）、<code>macro_map.csv</code>／<code>macro_gate.csv</code>／<code>macro_calls_eval.csv</code>（總經層）放在本目錄 <code>data/</code>。</p>
 <h2>免责</h2>
 <p>這裡的所有數字都是<strong>樣本內回測／观察性統計</strong>，不是交易建議。主要偏差已在各頁「限制」段落明寫：選樣以老王的提及頻率為準、未做同族群中性化、無做空與籌碼欄位、喊單方向由規則式抽取（已知精確度偏低）。</p>
   <script>

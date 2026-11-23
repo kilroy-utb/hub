@@ -217,6 +217,45 @@
 </table>
 <p><strong>當「規則候選來源」，不作獨立投票者</strong>：錢線百分百、GMONEY 財經皓角、台股達人秀、CMoney、理財達人秀 —— 多作者／節目型，無法歸因給同一位交易者。</p>
 <p><strong>排除</strong>：掏金術（規則表述極明確，但輸入是專利指標 → 不可回測）、宏爺講股（近期大量為學員限定 → 公開樣本有選擇偏差）、概念教學型頻道（LEI、羊來了、春哥美股等）。</p>
+<h2>總經型頻道追加篩檢（2026-11-24）</h2>
+<p>提問：她把總經講了很多，能否把總經型的頻道納入？做同樣三項檢查（抽取成本、規則密度、可歸因性）。</p>
+<table>
+<thead>
+<tr>
+<th>頻道</th>
+<th>訂閱</th>
+<th>公開片數</th>
+<th>字幕</th>
+<th>可用逐字稿</th>
+<th>抽取成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>財女珍妮</td>
+<td>155k</td>
+<td>87（10–15 分/片）</td>
+<td>早期有人工 zh-TW，近期僅 YouTube 自動字幕</td>
+<td>43 支／29.3 萬字</td>
+<td>近零</td>
+</tr>
+<tr>
+<td>游庭皓的財經皓角</td>
+<td>727k</td>
+<td>141（14–24 分/片，<strong>大量會員限定</strong>）</td>
+<td>113 支裡僅 7 支有 zh-TW，其餘只有 live_chat</td>
+<td>7 支／7.4 萬字</td>
+<td>需 ASR ≈36 CPU 小時</td>
+</tr>
+</tbody>
+</table>
+<p>同一支 step7 抽取器、同一組品質閘門下的<strong>喊單密度</strong>：陳昆仁 6,038 筆（ambiguous 52%）｜游庭皓 64 筆（<strong>84% ambiguous</strong>，其中 47 筆是台積電作為總經的載體）｜財女珍妮 74 筆（<strong>80% ambiguous</strong>，個股极少、多為 ETF／主題）。</p>
+<p>判定：
+1. <strong>兩家都不是 TA 投票者</strong>：均線／缺口／量能／停損密度趨近 0（游庭皓 0.1、珍妮 0.7），喊單密度只有投顧系的 1%。放進「誰該進場」的投票只會稀釋訊號。
+2. <strong>兩家是宏觀 regime 的候選聲音</strong>（總經密度 14.5／17.1＝老王的 2.2–2.6 倍）→ 角色對應 <a href="lao-wang-macro.html">總經層知識庫</a> 的閘門層：<strong>只允許建議部位縮放／現金比例，不生成個股訊號</strong>。
+3. 游庭皓影響最大但公開樣本雙重偏差（會員限定＋字幕闕失）→ 先不建引擎；若要納入，先做「可驗證宣稱抽取」（日期＋方向＋horizon＋具體變數），precision ≥80% 才准進入辯論。
+4. 財女珍妮抽取近零成本、語言有標點、多為可驗證的宏觀判斷 → 優先作為宏觀敘事的對照組與反證來源；但要先剔除說書/教學片（43 支裡有 8 支），且主題偏美股，對台股微觀結構沒有直接貢獻。
+5. 先前以「節目型、多來賓」排除 GMONEY 財經皓角的理由<strong>部分失效</strong>：游庭皓自有頻道確實是單主講 → 排除理由改成「可抽取性＋選擇偏差」。</p>
 <h2>用語指紋（每 10k 字出現次數）</h2>
 <p>腳本 <code>pipeline/step8_fingerprint.py</code>，輸出 <a href="data/style_fingerprint.csv"><code>data/style_fingerprint.csv</code></a>。</p>
 <table>
@@ -242,20 +281,20 @@
 <tbody>
 <tr>
 <td>老王</td>
-<td>685</td>
-<td>13.7M</td>
-<td>19.5</td>
-<td>10.3</td>
-<td><strong>4.3</strong></td>
-<td>3.9</td>
-<td>7.2</td>
+<td>722</td>
+<td>19.8M</td>
+<td>20.6</td>
+<td>11.4</td>
+<td><strong>4.0</strong></td>
+<td>3.5</td>
+<td>8.0</td>
 <td><strong>0.0</strong></td>
-<td>1.0</td>
-<td>1.3</td>
+<td>0.9</td>
+<td>1.5</td>
 <td><strong>0.7</strong></td>
-<td>9.2</td>
 <td>8.1</td>
 <td>6.5</td>
+<td>5.3</td>
 </tr>
 <tr>
 <td>學吧 LearningPa</td>
@@ -307,6 +346,40 @@
 <td>19.9</td>
 <td>8.4</td>
 <td>16.8</td>
+</tr>
+<tr>
+<td>游庭皓的財經皓角</td>
+<td>7</td>
+<td>0.07M</td>
+<td><strong>0.1</strong></td>
+<td>4.2</td>
+<td>0.0</td>
+<td>0.5</td>
+<td>5.9</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>3.6</td>
+<td>0.4</td>
+<td>9.4</td>
+<td><strong>17.1</strong></td>
+<td>11.3</td>
+</tr>
+<tr>
+<td>財女珍妮</td>
+<td>43</td>
+<td>0.29M</td>
+<td><strong>0.7</strong></td>
+<td>2.7</td>
+<td>0.1</td>
+<td>0.3</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>1.9</td>
+<td>0.3</td>
+<td>0.3</td>
+<td>9.4</td>
+<td><strong>14.5</strong></td>
+<td>17.5</td>
 </tr>
 </tbody>
 </table>
@@ -458,6 +531,7 @@
 <li><strong>有意義的辯論來自不同源的錯誤</strong>：老王有會員漏斗（公開言論不需對結果負責、hit 有聲 miss 無聲）；投顧系受金管會規範、不能直接喊買賣，語言保守但有推股／接盤的利益衝突。兩類錯誤方向不同 —— 這才是把它們放進同一機制的理由，而不是因為它們「準」。</li>
 <li><strong>regime 型規則需要事件表</strong>：國安基金護盤期間、處置股／分盤處置公告、禁空令日期。這些不能靠出話率決定要不要實作，也不該在投票時被稀釋成一般票。</li>
 <li><strong>先達標再投票</strong>：抽取器 precision 未達 80% 之前，任何投票／辯論的輸出都不值得信任。上線順序應該是 抽取品質 → 單家回測 → 才加第二家。</li>
+<li><strong>宏觀是閘門層，不是投票權</strong>：外盤均線閘門已被回測支持（每筆超額 +1.83%→+2.06%、maxDD −9.3%→−6.6%），但她的 Fed／CPI／就業語言不產生行動（傳導密度 5–13/1k）。宏觀專家的輸出應被限制為「部位縮放／現金比例」，且必附可驗證的 horizon，否則不進入辯論。</li>
 </ol>
   <script>
     (function () {
