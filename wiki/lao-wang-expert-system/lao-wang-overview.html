@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>總覽與現況 — Kilroy's Hub</title>
+  <meta name="description" content="專案目標、資料規模、已完成／未做、下一步優先序">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>總覽與現況</span>
+    </nav>
+<h1>總覽與現況</h1>
+<h2>這個專案想做什麼</h2>
+<p>把一位有大量公開內容的股市 YouTuber 的<strong>技術分析邏輯</strong>編成可執行的規則引擎，用它做進出場參考；之後納入其他頻道的系統，做投票／辯論。</p>
+<p>成立的前提有三個，其中兩個已被資料支持、一個尚未：</p>
+<table>
+<thead>
+<tr>
+<th>前提</th>
+<th>狀態</th>
+<th>證據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>她的規則可以用公開資料重建並回測</td>
+<td>已支持</td>
+<td><code>step5_rule_engine.py</code> 回測跑通，353 筆、超額 +1.78%/筆</td>
+</tr>
+<tr>
+<td>規則不是敘事而是可反駁的條件</td>
+<td>已支持</td>
+<td>消融顯示拿掉突破條件，超額掉到 +0.46%</td>
+</tr>
+<tr>
+<td>她的喊單可以逐筆抽出並統計勝率</td>
+<td>不成立</td>
+<td>規則式抽取人工複核精確度 ≈36%，見 <a href="lao-wang-audit.html">稽核</a></td>
+</tr>
+</tbody>
+</table>
+<p>第三點是整个多專家投票計畫的核心風險：<strong>能回測的是「規則」，不是「她講了哪些股票」</strong>。</p>
+<h2>資料規模（截至 2026-11-23）</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>頻道全系列影片</td>
+<td>2,639（videos 1,223／shorts 758／僅在播放清單 658）</td>
+</tr>
+<tr>
+<td>【老王不只三分鐘】系列</td>
+<td>892 集</td>
+</tr>
+<tr>
+<td>已轉逐字稿（ASR）</td>
+<td>688 集、約 1,780 萬字（統計樣本取 685 集：2021-11-09 → 2026-11-20）</td>
+</tr>
+<tr>
+<td>字幕频道（不需 ASR）</td>
+<td>陳昆仁分析師 109 支、朱家泓／理周 165 支、學吧 LearningPa 196 支</td>
+</tr>
+<tr>
+<td>回測 universe</td>
+<td>主引擎 24 檔；喊單統計 老王 201 檔／字幕三家 128 檔</td>
+</tr>
+</tbody>
+</table>
+<h2>已完成</h2>
+<ol>
+<li>全頻道目錄與時序元資料（<code>catalog.csv</code>，含標題日期、播放清單、觀看數）。</li>
+<li>ASR 管線（CPU faster-whisper small-int8，RTF 0.128 → 全系列約 70 CPU 小時）與專有名詞後修復。</li>
+<li>規則目錄 <code>RULES_SPEC.md</code>：19 個規則 probe，每條附原話證據、參數候選、可編碼性、矛盾項。</li>
+<li>規則引擎＋回測：無未来函数（t 日收盤訊號 → t+1 開盤成交）、復權價格、買賣成本、cluster bootstrap、消融、36 組參數掃描。</li>
+<li>規則飽和度稽核：確認規則目錄已閉合，並偵測出哪些規則是 regime 條件式（國安基金 ×3.8、處置股 ×1.55）。</li>
+<li>三家字幕頻道擷取＋用語指紋＋喊單 P&amp;L 相關性矩陣。</li>
+<li>喊單擷取的品質稽核（人工複核）與失敗模式分類。</li>
+</ol>
+<h2>尚未做（按預期報酬排序）</h2>
+<ol>
+<li><strong>同族群中性基準</strong>：現在的「超額」是相對 0050，不是相對同族群 → 有一部分數字是電子股 beta，必須重算。</li>
+<li><strong>universe 擴大到全市場流動股</strong>：目前是依老王的提及頻率選出的 24 檔，有選樣偏差。</li>
+<li><strong>籌碼／制度層資料接進來</strong>：外資・投信・自營每日買賣超、處置股／分盤處置公告、國安基金護盤期間、禁空令。這是她規則裡唯一「可能真有增量但還沒建模」的一層。</li>
+<li><strong>語意級喊單抽取器</strong>（取代規則式 cue 計數）＋≥100 筆驗證集，precision 門檻設 80%。</li>
+<li><strong>支撐導向停損</strong>（她的停損不是固定百分比）：需關鍵幀或人工標注支撐位。</li>
+<li><strong>第二家專家的規則引擎</strong>：同一套 spec→引擎→回測 流程套在陳昆仁（籌碼／制度派）上，才算真正的跨家比較。</li>
+</ol>
+<h2>邊際資源的判斷</h2>
+<ul>
+<li>老王剩下約 290 集未轉：<strong>對規則研究的邊際價值趨近零</strong>（飽和度檢核已證明）。若要轉，只應轉 2026 年的集數，理由是增加與字幕頻道的共同日期，讓跨家相關性能估計。</li>
+<li>三家字幕頻道都有人工 zh-TW 字幕，抽取成本趨近零。擴大樣本（每家 500–1,000 支）比繼續 ASR 划算得多。</li>
+</ul>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

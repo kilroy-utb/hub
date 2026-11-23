@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>飽和度與品質稽核 — Kilroy's Hub</title>
+  <meta name="description" content="規則飽和曲線、用語漂移、喊單擷取的人工複核（≈36%）">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>飽和度與品質稽核</span>
+    </nav>
+<h1>飽和度與品質稽核</h1>
+<p>這一頁回答兩個「計畫能不能成立」的問題：<strong>她的規則目錄是否完整</strong>，以及<strong>她的喊單能不能被可靠抽出</strong>。</p>
+<h2>A. 規則飽和度檢核</h2>
+<p>腳本：<code>pipeline/step9_rule_saturation.py --folds 8</code>；輸出 <code>data/rule_saturation.csv</code>、<code>data/rule_saturation_report.txt</code>。
+樣本：685 集逐字稿（2021-11-09 → 2026-11-20，含 2022 空頭、2025 關稅衝擊、2026 修正）。</p>
+<h3>A1. SPEC 涵蓋率 99.1%</h3>
+<p>685 集中 679 集至少提到一條已編目規則（19 個 probe）。完全落在 SPEC 之外的只有 6 集。</p>
+<h3>A2. 飽和曲線：前 85 集就講完整套規則</h3>
+<table>
+<thead>
+<tr>
+<th>折</th>
+<th>截止日</th>
+<th>集數</th>
+<th>當折出現的 probe 數</th>
+<th>詞彙數（≥8 集）</th>
+<th>亂序對照組</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2022-12-20</td>
+<td>85</td>
+<td>19</td>
+<td>23,087</td>
+<td>12,711</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2023-11-17</td>
+<td>171</td>
+<td>19</td>
+<td>41,703</td>
+<td>29,514</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2024-05-06</td>
+<td>256</td>
+<td>19</td>
+<td>52,611</td>
+<td>45,272</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2024-11-01</td>
+<td>342</td>
+<td>18</td>
+<td>63,788</td>
+<td>60,520</td>
+</tr>
+<tr>
+<td>5</td>
+<td>2025-04-25</td>
+<td>428</td>
+<td>19</td>
+<td>76,572</td>
+<td>76,203</td>
+</tr>
+<tr>
+<td>6</td>
+<td>2025-10-13</td>
+<td>513</td>
+<td>19</td>
+<td>90,029</td>
+<td>90,143</td>
+</tr>
+<tr>
+<td>7</td>
+<td>2026-04-02</td>
+<td>599</td>
+<td>19</td>
+<td>104,307</td>
+<td>105,881</td>
+</tr>
+<tr>
+<td>8</td>
+<td>2026-11-20</td>
+<td>685</td>
+<td>19</td>
+<td>120,790</td>
+<td>120,790</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>每一折都出現全部 19 個 probe</strong>，第 1 折（前 85 集）就完整，之後 600 集沒有任何新規則家族。</li>
+<li>詞彙成長曲線與「集數順序打亂」的對照組幾乎重合（終點同為 120,790）→ 新增的是罕見 ASR n-gram（雜訊），不是新概念。</li>
+</ul>
+<h3>A3. 跨年代漂移：核心穩定，外圍是 regime</h3>
+<p>出話率比值 = 最後三折平均 ÷ 前三折平均。</p>
+<table>
+<thead>
+<tr>
+<th>穩定核心（0.79–1.04）</th>
+<th>ratio</th>
+<th>regime 敏感／收斂中</th>
+<th>ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>突破波段高</td>
+<td>0.98</td>
+<td>停利／目標價</td>
+<td>1.23</td>
+</tr>
+<tr>
+<td>籌碼</td>
+<td>1.04</td>
+<td>處置／分盤</td>
+<td>1.11</td>
+</tr>
+<tr>
+<td>美股/費半</td>
+<td>1.03</td>
+<td>星期／日曆慣性</td>
+<td>1.10</td>
+</tr>
+<tr>
+<td>爆量／波段最大量</td>
+<td>0.93</td>
+<td>支撐停損</td>
+<td>0.88</td>
+</tr>
+<tr>
+<td>大盤量能</td>
+<td>0.93</td>
+<td>單一K棒（反對）</td>
+<td>0.88</td>
+</tr>
+<tr>
+<td>形態標籤</td>
+<td>0.96</td>
+<td>跌破均線出場</td>
+<td>0.84</td>
+</tr>
+<tr>
+<td>漲停鎖死</td>
+<td>0.95</td>
+<td>一條線/MA10</td>
+<td>0.79</td>
+</tr>
+<tr>
+<td>跌破均線出場</td>
+<td>0.84</td>
+<td>站上短均線</td>
+<td>0.76</td>
+</tr>
+<tr>
+<td>缺口</td>
+<td>0.73</td>
+<td>月/季線</td>
+<td>0.73</td>
+</tr>
+<tr>
+<td>國安基金</td>
+<td>0.82</td>
+<td>逢低／攤平（態度不一）</td>
+<td><strong>0.46</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>核心規則（突破、爆量、缺口、均線出場）橫跨多空市場都存在 → 這批才是她的 system。</li>
+<li>條件閘門類（國安基金、處置股、漲停鎖死）的提及率隨市場環境大幅變動 → 回測時必須當作<strong>事件閘門</strong>且樣本期間要涵蓋暴跌段，否則估計不到；不能用「出話率低」就決定不實作。</li>
+<li>逢低／攤平的語言在後期明顯收斂（0.46），與她「不逢低承接」的立場一致。</li>
+</ul>
+<h3>A4. 新增詞＝口號與題材，不是規則</h3>
+<p>加錨點濾網（候選詞必須出現在 買/賣/突破/均線/缺口/爆量/支撐/外資 等判斷詞 ±12 字內）後，後段常見、前段幾乎沒出現的詞全部可分解回既有 probe：<code>跌破爆大量</code>、<code>已經站上三(條)</code>、<code>第一根(爆量)</code>、<code>(三重)低點給(封閉)</code>、<code>(十日均)線洗盤</code>、<code>兇多吉少</code>。
+純題材詞（對等關稅、科技巨頭、南亞科/華邦電）在錨點濾網下消失 → 是市況主題變化，不是規則變化。
+未加錨點時會先跑出她的開場口號（「最準的法人視角／詳細的產業脈絡／最快最即時」）→ 屬樣板，不是規則。</p>
+<h3>A5. 粒度教訓：句子級不可用</h3>
+<ul>
+<li>句子級：含進出場動作的句子 8,676 句，其中 85% 無 probe 涵蓋 → 這個數字沒有意義，因為「昨天不要追」「禮拜二再砍」這類指稱前文的片段被切斷。</li>
+<li>視窗級（動作詞 ±150 字）：35,951 個進出場時刻，<strong>72.6% 附近有已編目規則</strong>；殘留 27.4% 是心理喊話、類比（買車／購物）、以及對他人買賣超的描述，不是缺規則。</li>
+<li>結論：擷取單位必須是「一個完整 setup（個股＋日期＋條件）」，逐句抽取會把規則切爛。</li>
+</ul>
+<h2>B. 喊單方向判讀的人工複核：精確度 ≈36%</h2>
+<p>方法：從規則式擷取的 <code>ledger_captions.csv</code> 隨機抽 14 筆非 ambiguous 的喊單，逐筆人工讀 340 字脈絡判定（seed=5）。</p>
+<p><strong>明確正確 3／14，勉強可接受 2／14，錯誤 8／14，無立場 1／14 → 精確度 ≈36%（寬認 50%）</strong>，跟亂猜（long/short 二選一＝50%）差不多。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>個股</th>
+<th>自動</th>
+<th>人工</th>
+<th>錯誤類型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>群聯 8299</td>
+<td>long</td>
+<td>neutral（他說這類「比較少講」且不追高）</td>
+<td>遠距離 cue 污染（「看好」指的是南亞科/華邦電）</td>
+</tr>
+<tr>
+<td>1</td>
+<td>台燿 6274</td>
+<td>short</td>
+<td>neutral（在講過去那根爆量是誰在砍）</td>
+<td>敘述被當成立場</td>
+</tr>
+<tr>
+<td>2</td>
+<td>台積電 2330</td>
+<td>long</td>
+<td>neutral（看好對象是「創意」，台積電只是背景）</td>
+<td>實體錯置</td>
+</tr>
+<tr>
+<td>3</td>
+<td>台積電 2330</td>
+<td>short</td>
+<td>neutral（開場「該買還是該賣」＋「有台積電的人很悶」）</td>
+<td>樣板／口語</td>
+</tr>
+<tr>
+<td>4</td>
+<td>力士 4923</td>
+<td>long</td>
+<td>不存在（讲的是南韓 SK<strong>海力士</strong>回購）</td>
+<td>股票名字串誤匹配</td>
+</tr>
+<tr>
+<td>5</td>
+<td>聯電 2303</td>
+<td>short</td>
+<td>偏 long（停損的人到今天少賺 20 萬＝不該停損）</td>
+<td>反向語意未還原</td>
+</tr>
+<tr>
+<td>6</td>
+<td>南電 8046</td>
+<td>short</td>
+<td>neutral（描述融資減半、斷頭賣壓）</td>
+<td>敘述被當成立場</td>
+</tr>
+<tr>
+<td>7</td>
+<td>台光電 2383</td>
+<td>long</td>
+<td>long（「台燿、台光電、聯茂…我們都持續看好的」）</td>
+<td>正確</td>
+</tr>
+<tr>
+<td>8</td>
+<td>台達電 2308</td>
+<td>long</td>
+<td>neutral（唸新聞：輝達點名台廠夥伴）</td>
+<td>新聞引述當成立場</td>
+</tr>
+<tr>
+<td>9</td>
+<td>台積電 2330</td>
+<td>short</td>
+<td>偏 long（「短線要注意波動，長線可留意逢低承接」）</td>
+<td>條件式立場被截斷</td>
+</tr>
+<tr>
+<td>10</td>
+<td>台積電 2330</td>
+<td>long</td>
+<td>weak long（權值股有承接力道）</td>
+<td>正確（弱）</td>
+</tr>
+<tr>
+<td>11</td>
+<td>南亞 1303</td>
+<td>long</td>
+<td>long（「這檔長期看好的股票」）</td>
+<td>正確</td>
+</tr>
+<tr>
+<td>12</td>
+<td>台積電 2330</td>
+<td>long</td>
+<td>weak long（爆量紅 K＝有人在買）</td>
+<td>正確（弱）</td>
+</tr>
+<tr>
+<td>13</td>
+<td>華通 2313</td>
+<td>long</td>
+<td>weak long（PCB 族群創高脈絡）</td>
+<td>正確（弱）</td>
+</tr>
+</tbody>
+</table>
+<h3>三類失敗模式（依發生頻率）</h3>
+<ol>
+<li><strong>實體錯置</strong>：立場屬於 A 股，被算進同一視窗裡的 B 股（#0 #2 #4）。4 位代號與公司名的字串匹配也會製造幽靈股票（海力士 → 力士）。</li>
+<li><strong>敘述 ≠ 立場</strong>：描述過去走勢、他人買賣超、新聞內容，都被 cue 計數當成建議（#1 #6 #8 #3）。</li>
+<li><strong>條件式立場被截斷</strong>：「短線不追、長線可逢低」這種雙期立場被硬切成單向（#5 #9）。</li>
+</ol>
+<h3>對架構的結論（這條決定了其他所有事）</h3>
+<ul>
+<li>不能拿規則式喊單當投票輸入。上游 36% 的輸入精度， downstream 再精緻的投票／辯論機制都救不回來。</li>
+<li>規則式擷取（<code>step7</code>）的正確定位是<strong>候選定位器</strong>（找出「這段在談哪檔、有沒有價格」），不是判讀器。</li>
+<li>判讀層需要語意級抽取器，輸出結構化的
+  <code>{ticker, code, date, stance ∈ {進場, 加碼, 續抱, 減碼, 出場, 觀望, 描述他人, 新聞}, condition, horizon, evidence_span}</code>，
+  其中 <code>evidence_span</code> 必須是逐字引文；查不到逐字證據、或個股不是該句主詞 → 丟棄。</li>
+<li>抽取器上線前先測 precision：驗證集擴到 ≥100 筆（三家各 30），<strong>門檻 ≥80%</strong> 才准進入回測／投票。</li>
+<li>只有 <code>stance ∈ {進場, 加碼, 續抱}</code> 與 <code>{減碼, 出場}</code> 該進投票；<code>描述他人／新聞／觀望</code> 必須排除，否則把敘述當訊號。</li>
+</ul>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

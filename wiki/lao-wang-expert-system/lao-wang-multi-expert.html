@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多專家與相關性 — Kilroy's Hub</title>
+  <meta name="description" content="頻道篩檢、用語指紋、喊單 P&L 相關矩陣、對投票機制的設計結論">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>多專家與相關性</span>
+    </nav>
+<h1>多專家：頻道篩檢、用語指紋、相關性</h1>
+<p>目標是把其他股市 YouTuber 的系統也纳入，最後做投票／辯論。這一頁記錄「誰值得納入」與「納入後資料顯示他們是否真的互補」。</p>
+<h2>頻道篩檢（2026-11-23）</h2>
+<p>方法：<code>yt-dlp ytsearch</code> 6 組 TA 關鍵字 → 111 個頻道聚合 → 對 22 個頻道抓規模、最近影片、<strong>字幕可取得性</strong>、字幕樣本的規則密度與術語分佈。
+篩檢條件：① 可抽取成本 ② 規則密度（可反駁的規則 vs 敘事）③ 可回測性（輸入資料是否公開可取）④ 單一身分一致性 ⑤ 行銷漏斗偏差 ⑥ 與老王的<strong>差異度</strong>（同派＝錯誤相關，投票價值打折）。</p>
+<table>
+<thead>
+<tr>
+<th>頻道</th>
+<th>訂閱</th>
+<th>存量</th>
+<th>字幕</th>
+<th>提供的新層</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>陳昆仁分析師（摩爾投顧）</td>
+<td>254k</td>
+<td>每日盤後＋緊急加錄</td>
+<td>人工 zh-TW</td>
+<td><strong>籌碼＋制度（處置股、國安基金、禁空）＋明確點位</strong></td>
+<td>第一優先</td>
+</tr>
+<tr>
+<td>學吧 LearningPa</td>
+<td>192k</td>
+<td>275</td>
+<td>人工 zh-TW</td>
+<td><strong>選股層</strong>：鎖碼、千張大戶持股比例</td>
+<td>納入</td>
+</tr>
+<tr>
+<td>朱家泓／理周教育學苑</td>
+<td>145k</td>
+<td>3,626（每日）</td>
+<td>人工 zh-TW</td>
+<td>同派（均線/量/突破）但規則命名最清楚：多頭確認、長黑吞噬＋大量＝假突破</td>
+<td>納入，投票權按同派相關性打折</td>
+</tr>
+<tr>
+<td>陳智霖股票分析師</td>
+<td>133k</td>
+<td>698</td>
+<td>人工 zh-TW</td>
+<td>突破/缺口/形態＋限空令 2.0</td>
+<td>備選</td>
+</tr>
+<tr>
+<td>KeensPie 群益期貨</td>
+<td>109k</td>
+<td>84</td>
+<td>人工 zh-TW</td>
+<td>台指期／宏觀每日，做大盤閘門的第二意見</td>
+<td>備選（存量偏少）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>當「規則候選來源」，不作獨立投票者</strong>：錢線百分百、GMONEY 財經皓角、台股達人秀、CMoney、理財達人秀 —— 多作者／節目型，無法歸因給同一位交易者。</p>
+<p><strong>排除</strong>：掏金術（規則表述極明確，但輸入是專利指標 → 不可回測）、宏爺講股（近期大量為學員限定 → 公開樣本有選擇偏差）、概念教學型頻道（LEI、羊來了、春哥美股等）。</p>
+<h2>用語指紋（每 10k 字出現次數）</h2>
+<p>腳本 <code>pipeline/step8_fingerprint.py</code>，輸出 <a href="data/style_fingerprint.csv"><code>data/style_fingerprint.csv</code></a>。</p>
+<table>
+<thead>
+<tr>
+<th>頻道</th>
+<th>支數</th>
+<th>字數</th>
+<th>均線</th>
+<th>突破/新高</th>
+<th>缺口</th>
+<th>量能</th>
+<th>籌碼</th>
+<th>指標(KD/RSI/MACD)</th>
+<th>型態</th>
+<th>停損/出場</th>
+<th>制度</th>
+<th>大盤/外盤</th>
+<th>總經</th>
+<th>基本面</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>老王</td>
+<td>685</td>
+<td>13.7M</td>
+<td>19.5</td>
+<td>10.3</td>
+<td><strong>4.3</strong></td>
+<td>3.9</td>
+<td>7.2</td>
+<td><strong>0.0</strong></td>
+<td>1.0</td>
+<td>1.3</td>
+<td><strong>0.7</strong></td>
+<td>9.2</td>
+<td>8.1</td>
+<td>6.5</td>
+</tr>
+<tr>
+<td>學吧 LearningPa</td>
+<td>196</td>
+<td>0.51M</td>
+<td>8.7</td>
+<td>6.3</td>
+<td>2.6</td>
+<td>8.7</td>
+<td>8.7</td>
+<td>2.1</td>
+<td>4.9</td>
+<td>10.1</td>
+<td>6.5</td>
+<td>7.1</td>
+<td>1.7</td>
+<td><strong>19.4</strong></td>
+</tr>
+<tr>
+<td>朱家泓／理周</td>
+<td>162</td>
+<td>0.31M</td>
+<td><strong>27.7</strong></td>
+<td><strong>14.5</strong></td>
+<td>1.6</td>
+<td>8.6</td>
+<td>7.5</td>
+<td>4.1</td>
+<td>5.5</td>
+<td>9.9</td>
+<td>2.3</td>
+<td><strong>18.3</strong></td>
+<td>4.1</td>
+<td>7.5</td>
+</tr>
+<tr>
+<td>陳昆仁分析師</td>
+<td>109</td>
+<td>1.03M</td>
+<td>10.5</td>
+<td>6.3</td>
+<td>0.4</td>
+<td>5.0</td>
+<td><strong>21.2</strong></td>
+<td>0.0</td>
+<td>0.9</td>
+<td>7.6</td>
+<td><strong>13.6</strong></td>
+<td>19.9</td>
+<td>8.4</td>
+<td>16.8</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>三家互補性成立：陳昆仁補<strong>籌碼＋制度</strong>（老王这两層分别是 7.2 与 0.7）、學吧補<strong>基本面／選股</strong>、朱家泓補<strong>指標派</strong>（老王完全不用 KD/RSI/MACD，0.0）。</li>
+<li>朱家泓與老王同派（均線 27.7、突破 14.5 都是四家最高）→ 這是預期中的<strong>冗餘投票者</strong>。</li>
+<li>注意：一個 YouTube 頻道不等於一位專家。理周教育學苑是學苑（朱家泓、錢坤、余適安、林教授、王慶津、莊崚…輪流），陳昆仁有盤前（#財經早點名）與盤後（#仁者無敵）兩個節目。<strong>投票單位必須是講師／節目</strong>，已把 <code>expert</code>／<code>program</code>／<code>when(pre|post)</code> 寫進 ledger。</li>
+</ul>
+<h2>喊單層統計（各家實際點名的 10 日前瞻報酬）</h2>
+<p>腳本 <code>pipeline/step10_evaluate_calls.py</code>：call 日 → 下一交易日開盤成交（盤前節目改用當日開盤）、復權價格、進場成本 0.25%、horizon 10 個交易日、超額相對 0050、bootstrap 以「日期」聚類（同一天的喊單共用同一個市場結果）。</p>
+<p><strong>老王（685 集 ledger，2,414 筆可評分，393 個交易日）</strong></p>
+<table>
+<thead>
+<tr>
+<th>分層</th>
+<th>筆數</th>
+<th>超額/筆</th>
+<th>勝率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全部</td>
+<td>2,414</td>
+<td>−0.20%</td>
+<td>47.6%</td>
+</tr>
+<tr>
+<td>long</td>
+<td>1,447</td>
+<td>+0.35%</td>
+<td>43.5%</td>
+</tr>
+<tr>
+<td>short／減碼</td>
+<td>967</td>
+<td>−1.03%</td>
+<td>53.8%</td>
+</tr>
+<tr>
+<td><strong>無條件基準（同一批 201 檔、同期）</strong></td>
+<td>190,708</td>
+<td><strong>−0.94%</strong></td>
+<td>38.9%</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>相對「同一批股票隨機日進場」的基準，她的 long 點名好約 1.3pp —— 與規則引擎的 +1.78% 一致。</li>
+<li>但她的 short／減碼點名方向化後是 <strong>−1.03%</strong>：她喊賣之後那些股票反而跑贏。原因不是她錯，而是<strong>出場規則的價值在降低回撤，不在預測 10 天內的下跌</strong>；把出場語言當成做空訊號來評分，是評錯東西。</li>
+<li>她的點名池本身是弱勢池（無條件超額 −0.94%、勝率 38.9%），所以任何「絕對勝率」都要先減掉這個基準。</li>
+</ul>
+<p><strong>三家字幕頻道（同一腳本，horizon 10 日）</strong></p>
+<table>
+<thead>
+<tr>
+<th>頻道</th>
+<th>筆數</th>
+<th>交易日</th>
+<th>超額/筆</th>
+<th>95%CI</th>
+<th>勝率</th>
+<th>PF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>學吧 LearningPa</td>
+<td>116</td>
+<td>29</td>
+<td>+0.65%</td>
+<td>[−0.49%, +1.70%]</td>
+<td>50.9%</td>
+<td>1.46</td>
+</tr>
+<tr>
+<td>朱家泓／理周</td>
+<td>56</td>
+<td>17</td>
+<td>−0.69%</td>
+<td>[−3.48%, +0.81%]</td>
+<td>48.2%</td>
+<td>0.74</td>
+</tr>
+<tr>
+<td>陳昆仁分析師</td>
+<td>2,640</td>
+<td>67</td>
+<td>−0.62%</td>
+<td>[−1.76%, +0.01%]</td>
+<td>47.8%</td>
+<td>0.85</td>
+</tr>
+<tr>
+<td>無條件基準（128 檔、同期）</td>
+<td>73,640</td>
+<td>—</td>
+<td>+0.02%</td>
+<td>—</td>
+<td>42.5%</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>喊單 P&amp;L 日報酬相關係數</strong>（愈高＝兩家的下注同涨同跌＝投票愈多餘）</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>學吧</th>
+<th>朱家泓</th>
+<th>陳昆仁</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>學吧</td>
+<td>1.00</td>
+<td>+0.09</td>
+<td><strong>+0.87</strong></td>
+</tr>
+<tr>
+<td>朱家泓</td>
+<td>+0.09</td>
+<td>1.00</td>
+<td>+0.45</td>
+</tr>
+<tr>
+<td>陳昆仁</td>
+<td>+0.87</td>
+<td>+0.45</td>
+<td>1.00</td>
+</tr>
+</tbody>
+</table>
+<p>同檔同日前後 3 個交易日內的重疊：學吧×陳昆仁 8 筆（盈虧同向 50%）、陳昆仁×朱家泓 10 筆（60%）、學吧×朱家泓 2 筆（100%）。</p>
+<h3>这批數字的可信度（必須一起讀）</h3>
+<ol>
+<li>上游喊單抽取的人工精確度只有 ≈36%（見 <a href="lao-wang-audit.html">稽核</a>）→ 上述所有「誰比較準」的數字，目前描述的是<strong>抽取器的品質</strong>，不是專家的品質。</li>
+<li>字幕頻道只有 3–8 個月樣本（17–67 個有喊單的交易日），CI 很寬，學吧的 +0.65% 與 0 無法區分。</li>
+<li>相關性矩陣的 n 太小（2 個共同日～數十個），只能當方向性参考。真正需要的是<strong>共同日期變多</strong>：把字幕頻道往回抓（有字幕 → 近零成本）比繼續 ASR 划算。</li>
+<li>78 檔一度抓不到價格，原因是 Yahoo 對上櫃（TPEx）股票要用 <code>.TWO</code> 後綴；修掉後只剩 1 檔真的查無資料。教訓：丟掉抓不到价格的樣本會 introduce 倖存者偏差，必須列出來。</li>
+</ol>
+<h2>對投票／辯論機制的設計結論</h2>
+<ol>
+<li><strong>投票單位是「規則層」不是「頻道」</strong>。她的突破/爆量/缺口是進場層，陳昆仁的籌碼/制度是閘門層，學吧的鎖碼是選股層 → 三層各自表態，而不是三家對一檔股投一張票。</li>
+<li><strong>出場規則不能獨立投票</strong>，必須與它所依附的進場 setup 一起評估（否則會像上面那樣得出「她喊賣後股票上漲」這種誤導結論）。</li>
+<li><strong>同派打折</strong>：朱家泓與老王用語指紋高度重疊 → 即使喊單相關係數估計不準，先驗上也該給較低權重（或把兩人當成同一個「均線突破派」）。</li>
+<li><strong>有意義的辯論來自不同源的錯誤</strong>：老王有會員漏斗（公開言論不需對結果負責、hit 有聲 miss 無聲）；投顧系受金管會規範、不能直接喊買賣，語言保守但有推股／接盤的利益衝突。兩類錯誤方向不同 —— 這才是把它們放進同一機制的理由，而不是因為它們「準」。</li>
+<li><strong>regime 型規則需要事件表</strong>：國安基金護盤期間、處置股／分盤處置公告、禁空令日期。這些不能靠出話率決定要不要實作，也不該在投票時被稀釋成一般票。</li>
+<li><strong>先達標再投票</strong>：抽取器 precision 未達 80% 之前，任何投票／辯論的輸出都不值得信任。上線順序應該是 抽取品質 → 單家回測 → 才加第二家。</li>
+</ol>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -42,6 +42,14 @@ sections:
     badge_source:
       local: "wiki/finance"
 
+  - title: "老王 TA 專家系統"
+    icon: "📈"
+    desc: "從【老王不只三分鐘】892 集蒸餾的進出場規則、11 年回測、規則飽和度稽核與多專家相關性"
+    type: wiki
+    url: "https://kilroy-utb.github.io/hub/wiki/lao-wang-expert-system/"
+    badge_source:
+      local: "wiki/lao-wang-expert-system"
+
   - title: "GX10 × Strata LLM"
     icon: "🖥️"
     desc: "在 ASUS Ascent GX10 上部署 Strata LLM 與 Qwen3.8-Flash-Next 125B"

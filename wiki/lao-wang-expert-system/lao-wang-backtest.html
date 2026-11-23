@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>回測報告 — Kilroy's Hub</title>
+  <meta name="description" content="方法論、主結果表、消融、36 組參數掃描、年代分段、限制">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>回測報告</span>
+    </nav>
+<h1>回測報告（規則引擎）</h1>
+<p>產出腳本：<code>pipeline/step5_rule_engine.py</code>；規則來源：<a href="lao-wang-rules.html">進出場規則目錄</a>；原始輸出 CSV 見 <a href="data/"><code>data/</code></a>。</p>
+<h2>方法（反未来函数的紀律）</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>設定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>視窗</td>
+<td>2015-01-01 ～ 2026-11-22（2,900 個交易日）</td>
+</tr>
+<tr>
+<td>Universe</td>
+<td>24 檔（依她的內容提及頻率選出，故有選樣偏差）：2330/2317/2454/2324/2323/2357/3231/2353/2412/2303/2327/2344/2337/2409/3481/1303/4958/3037/2313/2492/2328/3706/2408/6770</td>
+</tr>
+<tr>
+<td>價格</td>
+<td>Yahoo 復權（adjclose 比例套到 O/H/L），除息不產生假缺口／假跌破</td>
+</tr>
+<tr>
+<td>時間紀律</td>
+<td>訊號只用 t 日收盤以前的資料；成交在 t+1 開盤 → 無 look-ahead</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>買 0.25%、賣 0.40%（含手續費與交易稅）；另設「漲停鎖死跳過進場」過濾</td>
+</tr>
+<tr>
+<td>部位</td>
+<td>單股 long/flat，組合等權重；未持倉為現金（不計利息）</td>
+</tr>
+<tr>
+<td>基準規則 base</td>
+<td>突破 126 日波段高 ＋ vol ≥ 2×MA20(vol) ＋ 收盤站上 MA5/10/20 ＋ 出場＝收盤跌破 MA10</td>
+</tr>
+<tr>
+<td>信賴區間</td>
+<td>cluster bootstrap，分群為 (股票, 月份)</td>
+</tr>
+</tbody>
+</table>
+<h2>主結果（2015–2026）</h2>
+<table>
+<thead>
+<tr>
+<th>變體</th>
+<th>筆數</th>
+<th>命中率</th>
+<th>無條件基準命中率</th>
+<th>edge</th>
+<th>平均報酬/筆</th>
+<th>95%CI</th>
+<th>超額/筆</th>
+<th>PF</th>
+<th>持有日</th>
+<th>曝險</th>
+<th>CAGR</th>
+<th>maxDD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>base（她的規則）</td>
+<td>353</td>
+<td>41.9%</td>
+<td>53.7%</td>
+<td>−11.8pp</td>
+<td>+2.79%</td>
+<td>[1.19%, 4.52%]</td>
+<td>+1.78%</td>
+<td>1.92</td>
+<td>9.7</td>
+<td>5.2%</td>
+<td>2.77%</td>
+<td>−7.9%</td>
+</tr>
+<tr>
+<td>拿掉突破條件</td>
+<td>1,170</td>
+<td>33.7%</td>
+<td>53.7%</td>
+<td>−20.1pp</td>
+<td>+1.23%</td>
+<td>[0.44%, 2.06%]</td>
+<td>+0.46%</td>
+<td>1.47</td>
+<td>8.5</td>
+<td>15.2%</td>
+<td>3.59%</td>
+<td>−15.5%</td>
+</tr>
+<tr>
+<td>拿掉爆量條件</td>
+<td>577</td>
+<td>39.3%</td>
+<td>53.7%</td>
+<td>−14.4pp</td>
+<td>+2.58%</td>
+<td>[1.40%, 3.89%]</td>
+<td>+1.63%</td>
+<td>1.95</td>
+<td>9.4</td>
+<td>8.2%</td>
+<td>4.37%</td>
+<td>−9.9%</td>
+</tr>
+<tr>
+<td>拿掉均線對齊</td>
+<td>353</td>
+<td>41.9%</td>
+<td>—</td>
+<td>同 base</td>
+<td>+2.79%</td>
+<td>—</td>
+<td>+1.78%</td>
+<td>1.92</td>
+<td>9.7</td>
+<td>—</td>
+<td>—</td>
+<td>數學必然冗餘</td>
+</tr>
+<tr>
+<td>加缺口未回補</td>
+<td>313</td>
+<td>41.2%</td>
+<td>53.7%</td>
+<td>−12.5pp</td>
+<td>+2.91%</td>
+<td>[1.15%, 5.07%]</td>
+<td>+1.75%</td>
+<td>1.96</td>
+<td>9.8</td>
+<td>4.7%</td>
+<td>2.68%</td>
+<td>−6.1%</td>
+</tr>
+<tr>
+<td>加美股/費半閘門</td>
+<td>353</td>
+<td>41.9%</td>
+<td>—</td>
+<td>同 base</td>
+<td>+2.79%</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>幾乎不 binding</td>
+</tr>
+<tr>
+<td>加月/季線閘門</td>
+<td>353</td>
+<td>41.9%</td>
+<td>—</td>
+<td>同 base</td>
+<td>+2.79%</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>數學必然冗餘</td>
+</tr>
+<tr>
+<td>關掉鎖漲停濾鏡</td>
+<td>355</td>
+<td>42.3%</td>
+<td>53.7%</td>
+<td>−11.5pp</td>
+<td>+2.87%</td>
+<td>—</td>
+<td>+1.88%</td>
+<td>1.95</td>
+<td>9.7</td>
+<td>—</td>
+<td>—</td>
+<td>只影響 2 筆</td>
+</tr>
+<tr>
+<td><strong>無進場條件（floor）</strong></td>
+<td>9,861</td>
+<td>28.3%</td>
+<td>53.7%</td>
+<td>−25.4pp</td>
+<td><strong>−0.04%</strong></td>
+<td>[−0.17%, +0.11%]</td>
+<td>−0.42%</td>
+<td>0.98</td>
+<td>3.7</td>
+<td>63.9%</td>
+<td>−7.0%</td>
+<td><strong>−74.6%</strong></td>
+</tr>
+<tr>
+<td>同進場、出場改固定 20 日</td>
+<td>338</td>
+<td>49.7%</td>
+<td>53.7%</td>
+<td>−4.0pp</td>
+<td>+4.03%</td>
+<td>[2.09%, 5.86%]</td>
+<td>+1.71%</td>
+<td>2.08</td>
+<td>20.5</td>
+<td>9.8%</td>
+<td>4.08%</td>
+<td>−11.6%</td>
+</tr>
+<tr>
+<td>0050 buy &amp; hold</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>100%</td>
+<td>18.85%</td>
+<td>−33.8%</td>
+</tr>
+<tr>
+<td>0050 MA200 濾鏡</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>73.1%</td>
+<td>16.97%</td>
+<td>−23.4%</td>
+</tr>
+</tbody>
+</table>
+<h2>年代分段（同一組參數，沒有重新調參）</h2>
+<table>
+<thead>
+<tr>
+<th>區間</th>
+<th>筆數</th>
+<th>命中率</th>
+<th>超額/筆</th>
+<th>PF</th>
+<th>maxDD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2015–2019</td>
+<td>136</td>
+<td>45.6%</td>
+<td>+2.30%</td>
+<td>2.12</td>
+<td>−2.9%</td>
+</tr>
+<tr>
+<td>2020–2023（含崩盤與空頭）</td>
+<td>114</td>
+<td>41.2%</td>
+<td>+1.24%</td>
+<td>1.78</td>
+<td>−4.2%</td>
+</tr>
+<tr>
+<td>2024–2026</td>
+<td>73</td>
+<td>45.2%</td>
+<td>+3.63%</td>
+<td>2.46</td>
+<td>−5.9%</td>
+</tr>
+</tbody>
+</table>
+<h2>參數掃描（36 組）</h2>
+<p>維度：波段高 63/126/252 日 × 爆量 1.5/2/3 倍 × 出場 MA5/10/20/60。</p>
+<ul>
+<li><strong>36/36 平均報酬為正、35/36 超額為正</strong>（唯一負的是 252 日高＋3 倍量＋MA5 出場，−0.36%/筆）→ 結果不是單點參數的僥倖。</li>
+<li>出場線越鬆越好（就平均報酬而言）：MA5 +0.36% → MA10 +1.69% → MA20 +3.63% → MA60 +10.4%（超額/筆），但回撤與曝險同步上升。</li>
+<li>突破視窗越長越好：63 日 +3.22% → 126 日 +4.07% → 252 日 +4.77%。</li>
+<li>爆量倍數越高越好但交易數急減：1.5× 5,125 筆 → 3× 2,096 筆。</li>
+</ul>
+<h2>判讀</h2>
+<ol>
+<li><strong>她的進場濾網是真價值</strong>。完全拿掉進場條件、只用她的出場規則：9,861 筆、平均每筆 −0.04%、PF 0.98、maxDD −74.6%。加上進場條件：每筆 +2.79%、PF 1.92、maxDD −7.9%。價值來自「挑什麼時點進場」，不是「挑哪檔股票」。</li>
+<li><strong>突破條件貢獻最大</strong>：拿掉它，每筆超額從 +1.78% 掉到 +0.46%，回撤翻倍。</li>
+<li><strong>爆量條件在此 universe 沒有加分</strong>（差 0.15pp，CAGR 反而更高）。推測它在流動性差／處置股脈絡才有意義，而那層目前無法建模。</li>
+<li><strong>均線對齊與月/季線閘門是冗餘的</strong>：突破 N 個月高點在數學上必然已在所有較短均線之上。她語言中的「三條短期均線站上」是同一狀態的另一種說法，不是獨立條件。</li>
+<li><strong>MA10「一條線」出場是用報酬換回撤</strong>：同進場下固定 20 日每筆 +4.03% vs MA10 的 +2.79%，但回撤 −7.9% vs −11.6%。這是風險偏好選擇，不是錯誤。</li>
+<li><strong>win-rate 會誤殺這套系統</strong>：命中率 41.9% 低於無條件基準 53.7%，但 PF 1.92、每筆超額 +1.78%、CI 不含 0。她的結構是低勝率、右偏、靠尾部大行情（「海闊天空」）。若以勝率當 KPI，這套規則在第一輪就被淘汰。</li>
+</ol>
+<h2>限制（解讀前必讀）</h2>
+<ul>
+<li>Universe 只有 24 檔電子/傳產，且是<strong>依她的 coverage 選出</strong>（選樣偏差）；6770 只有 2023 年後資料。</li>
+<li>未做同族群中性化：「超額」是相對 0050，不是相對同族群 → 有一部分數字其實是電子股 beta。</li>
+<li>Cluster bootstrap 只按 (股票, 月份) 分群；24 檔高度同質、同一 regime → <strong>CI 偏狹，顯著性被高估</strong>。</li>
+<li>無做空、無外資/投信籌碼欄位、無處置股公告 → 她的 L3 可執行性規則目前無法完整建模。</li>
+<li>成本與滑價為假設值；突破日常常跳空開高，t+1 開盤成交已含部分延遲，實際滑價可能更高。</li>
+<li>「支撐導向停損」與「形態」未實作。</li>
+<li>規則來自她的<strong>語言</strong>，不是她的持倉紀錄；也沒有對照她發言的實際時點。</li>
+</ul>
+<h2>下一步（依預期報酬排序）</h2>
+<ol>
+<li>同族群／多因子對照組重算 edge，剔除電子股 beta；universe 扩到全市場流動股。</li>
+<li>接入外資・投信連買賣超與處置股公告 → 驗 L3 閘門（最可能真有增量的一層）。</li>
+<li>以關鍵幀／人工標注實作支撐導向停損。</li>
+<li>把同一份 spec→引擎→回測 流程套在第二家（籌碼/制度派）上。</li>
+</ol>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

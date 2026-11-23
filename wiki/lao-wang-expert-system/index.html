@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>老王 TA 專家系統 — Kilroy's Hub</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> /
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> / <span>老王 TA 專家系統</span>
+    </nav>
+
+    <header>
+      <h1><span class="icon">📈</span> 老王 TA 專家系統</h1>
+      <p class="desc">把【老王不只三分鐘】的技術分析蒸餏成可回測、可反駁的規則引擎；685 集逐字稿、24 櫌 11 年回測、規則頭和度稽核、多專家相關性</p>
+      <div class="actions">
+        <a href="https://github.com/kilroy-utb/hub/new/main/wiki?filename=wiki/lao-wang-expert-system/new-file.md" target="_blank" rel="noopener">+ 新增檔案</a>
+        <a href="https://github.com/kilroy-utb/hub/tree/main/wiki/lao-wang-expert-system" target="_blank" rel="noopener">📁 資料夹</a>
+        <a href="https://kilroy-utb.github.io/hub/wiki/">← Wiki 列表</a>
+      </div>
+    </header>
+
+    <input type="text" class="search" id="search" placeholder="搜尊…">
+
+    <div class="file-list" id="file-list">
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">總覽與現況</span>
+        <span class="file-meta">專案目標、資料規模、已完成／未做、下一步優先序</span>
+        <a class="file-link" href="./lao-wang-overview.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-overview.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">進出場規則目錄</span>
+        <span class="file-meta">L0–L4 規則、出現次數、原話證據、參數候選、可編碼性、明確反對、矛盾項</span>
+        <a class="file-link" href="./lao-wang-rules.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-rules.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">回測報告</span>
+        <span class="file-meta">方法論、主結果表、消融、36 組參數掃描、年代分段、限制</span>
+        <a class="file-link" href="./lao-wang-backtest.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-backtest.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">飽和度與品質稽核</span>
+        <span class="file-meta">規則飽和曲線、用語漂移、喊單擷取的人工複核（≈36%）</span>
+        <a class="file-link" href="./lao-wang-audit.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-audit.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">多專家與相關性</span>
+        <span class="file-meta">頻道篩檢、用語指紋、喊單 P&L 相關矩陣、對投票機制的設計結論</span>
+        <a class="file-link" href="./lao-wang-multi-expert.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-multi-expert.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📄</span>
+        <span class="file-name">資料管線與重現指令</span>
+        <span class="file-meta">step0–step10 的輸入輸出、成本、指令、踩過的坑</span>
+        <a class="file-link" href="./lao-wang-pipeline.html">閱讀</a>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/blob/main/wiki/lao-wang-expert-system/lao-wang-pipeline.md">厖始</a>
+      </div>
+      <div class="file-item">
+        <span class="file-icon">📊</span>
+        <span class="file-name">data/ 分析輸出 CSV</span>
+        <span class="file-meta">36 組參數掃描、消融、規則頭出該率、用語指紋、喊單統計</span>
+        <a class="file-link" href="https://github.com/kilroy-utb/hub/tree/main/wiki/lao-wang-expert-system/data">打開</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const saved = localStorage.getItem('hub-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme') || 'light';
+      const next = cur === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('hub-theme', next);
+    });
+
+    const search = document.getElementById('search');
+    const items = Array.from(document.querySelectorAll('.file-item'));
+    search.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      let visible = 0;
+      items.forEach(it => {
+        const match = !q || it.textContent.toLowerCase().includes(q);
+        it.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      document.getElementById('empty-msg')?.remove();
+      if (visible === 0) {
+        const empty = document.createElement('div');
+        empty.id = 'empty-msg';
+        empty.className = 'empty';
+        empty.textContent = '沒有符合的檔案。';
+        document.getElementById('file-list').appendChild(empty);
+      }
+    });
+  </script>
+</body>
+</html>

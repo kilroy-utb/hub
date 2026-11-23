@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資料管線與重現指令 — Kilroy's Hub</title>
+  <meta name="description" content="step0–step10 的輸入輸出、成本、指令、踩過的坑">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>資料管線與重現指令</span>
+    </nav>
+<h1>資料管線（step0–step10）與重現指令</h1>
+<p>原始 repo（未公開）：<code>~/codex/lao_wang_channel</code>。下面每一階都對應一個可重跑的腳本，輸出都是 CSV/JSON，沒有手工步驟（除標注外）。</p>
+<h2>管線表</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>腳本</th>
+<th>輸入</th>
+<th>輸出</th>
+<th>實測成本</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 目錄</td>
+<td><code>step0_metadata.py</code></td>
+<td>頻道 id</td>
+<td><code>catalog.csv/.json</code>（2,639 支：id、標題、類型、長度、觀看、播放清單、標題日期）、<code>availability.tsv</code></td>
+<td>數秒</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>1 抓音訊</td>
+<td><code>step1_fetch_audio.py</code></td>
+<td>id 清單</td>
+<td><code>audio/&lt;id&gt;.m4a</code>＋<code>fetch_manifest.jsonl</code></td>
+<td>單集 45–47MB、約 5 秒；全系列 892 集 ≈40GB</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>2 ASR</td>
+<td><code>step2_asr.py</code>（faster-whisper <code>small</code> int8，CPU 6 執行緒）</td>
+<td>m4a</td>
+<td><code>transcripts/&lt;id&gt;.txt/.json</code></td>
+<td>RTF 0.128 → 單集 49 分鐘音訊 6.3 分鐘；全系列 ≈70 CPU 小時</td>
+<td>進行中（685/892）</td>
+</tr>
+<tr>
+<td>2b 名稱修復</td>
+<td><code>step2b_name_repair.py</code></td>
+<td>txt＋<code>ticker_map.json</code></td>
+<td><code>&lt;id&gt;.fixed.txt</code>＋repair log</td>
+<td>秒級</td>
+<td>完成（ASR 把「力積電／南亞科／友達／富喬」整批漏識）</td>
+</tr>
+<tr>
+<td>3 摘要</td>
+<td><code>step3_digest.py</code></td>
+<td>transcripts</td>
+<td><code>digests/&lt;id&gt;.digest.txt</code>＋signals.json</td>
+<td>單集壓到 ≈1.7k 字</td>
+<td>完成（單集驗證）</td>
+</tr>
+<tr>
+<td>4 台帳（舊）</td>
+<td><code>step4_strategy_ledger.py</code></td>
+<td>digests</td>
+<td><code>ledger_3min.csv</code></td>
+<td>—</td>
+<td>方向判定不可靠，<code>score()</code> 引用不存在的欄位 → 已停用，僅供歷史</td>
+</tr>
+<tr>
+<td>5 規則引擎＋回測</td>
+<td><code>step5_rule_engine.py</code>（<code>fetch</code>/<code>backtest</code>/<code>sweep</code>）</td>
+<td>RULES_SPEC 參數＋Yahoo 復權</td>
+<td><code>data/BACKTEST_REPORT.md</code>、<code>ablation_*.csv</code>、<code>sweep_*.csv</code>、<code>data/px/*.csv</code></td>
+<td>24 檔抓價 ≈1 分鐘；回測秒級；36 組掃描 ≈1 分鐘</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>6 字幕抓取</td>
+<td><code>step6_captions.py</code></td>
+<td>頻道 id</td>
+<td><code>captions/&lt;頻道&gt;/&lt;vid&gt;.txt</code>、<code>.info.json</code>、<code>.desc.txt</code>、<code>index.csv</code></td>
+<td>有字幕的頻道抽取近零成本（三家各 150–250 支 ≈ 數分鐘）</td>
+<td>完成（三家）</td>
+</tr>
+<tr>
+<td>7 跨家台帳</td>
+<td><code>step7_ledger_captions.py</code></td>
+<td>captions</td>
+<td><code>ledger_captions.csv</code>（含 <code>expert</code>/<code>program</code>/<code>when</code>）</td>
+<td>秒級</td>
+<td>完成，但方向精確度 ≈36%</td>
+</tr>
+<tr>
+<td>8 用語指紋</td>
+<td><code>step8_fingerprint.py</code></td>
+<td>transcripts＋captions</td>
+<td><code>data/style_fingerprint.csv</code>＋立場相關、重疊一致性</td>
+<td>≈2 分鐘</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>9 規則飽和度</td>
+<td><code>step9_rule_saturation.py</code></td>
+<td>全部逐字稿</td>
+<td><code>data/rule_saturation.csv</code>＋報告 txt</td>
+<td>≈20 秒</td>
+<td>完成</td>
+</tr>
+<tr>
+<td>10 喊單評核</td>
+<td><code>step10_evaluate_calls.py</code></td>
+<td>任一 ledger＋價格</td>
+<td><code>data/call_eval.csv</code>、<code>call_quality.csv</code>＋P&amp;L 相關矩陣</td>
+<td>首次抓 200+ 檔價格 ≈20 分鐘，之後快取</td>
+<td>完成</td>
+</tr>
+</tbody>
+</table>
+<h2>重現指令</h2>
+<pre><code class="language-bash">cd ~/codex/lao_wang_channel
+
+# 規則引擎
+python3 pipeline/step5_rule_engine.py fetch      # 抓復權價格到 data/px/
+python3 pipeline/step5_rule_engine.py backtest   # 主結果＋消融
+python3 pipeline/step5_rule_engine.py sweep      # 36 組參數掃描
+
+# 字幕頻道（抽取近零成本）
+python3 pipeline/step6_captions.py --channel &lt;channel_id&gt; --name &lt;頻道名&gt; --limit 250
+python3 pipeline/step7_ledger_captions.py         # → ledger_captions.csv
+python3 pipeline/step8_fingerprint.py             # → data/style_fingerprint.csv
+python3 pipeline/step9_rule_saturation.py --folds 8
+python3 pipeline/step10_evaluate_calls.py --ledger ledger_captions.csv --horizon 10
+
+# 頻道篩檢用的 yt-dlp 查詢
+~/.local/bin/yt-dlp &quot;ytsearch20:台股 技術分析 均線 策略&quot; --flat-playlist \
+  --print &quot;%(channel_id)s | %(channel)s | %(view_count)s | %(title).55s&quot;
+~/.local/bin/yt-dlp --skip-download --write-subs --sub-langs zh-TW,zh-Hant &quot;https://www.youtube.com/watch?v=&lt;id&gt;&quot;
+</code></pre>
+<h2>踩過的坑（每一條都花過時間）</h2>
+<ol>
+<li><strong>Yahoo 對上櫃（TPEx）股票要用 <code>.TWO</code></strong>，主板用 <code>.TW</code>。一律用 <code>.TW</code> 會讓 78 檔出現「No data found, symbol may be delisted」，看起來像退市，其實是後綴錯。現在 <code>step10</code> 會先 <code>.TW</code> 再 <code>.TWO</code>，並把真的查無資料的檔寫進 <code>data/px_failed.txt</code>（避免每次重跑都重試）。<strong>丟掉抓不到價格的樣本會製造倖存者偏差，所以失敗清單必須留著看。</strong></li>
+<li><strong>Yahoo chart API 的 <code>indicators.adjclose</code> 有時是 list、有時是 dict</strong>，兩邊都要處理。</li>
+<li><strong>必須用復權序列</strong>（adjclose 比例套到 O/H/L），否則除息會製造假缺口與假跌破 —— 她的缺口與均線出場規則會直接被污染。</li>
+<li><strong><code>-J</code>（dump JSON）在 simulate 模式下不會列播放清單</strong>；字幕抓取改用 <code>--skip-download --write-subs --write-info-json</code>。</li>
+<li><strong>股票名字串匹配會製造幽靈股票</strong>：「爆大量」→ 大量科技、「海力士」→ 力士、「世界」→ 世界先進。解法是兩層閘門：常見詞只有在 4 碼代號鄰近或出現在標題時才算；黑名單（<code>STOP</code>）要确实接到過濾函數上（曾經定義了卻沒使用，導致「大量」變成 107 筆喊單）。</li>
+<li><strong>最長名稱優先＋字元 consumption</strong>，否則「南亞科」會同時被記成「南亞」。</li>
+<li><strong>ASR 的專有名詞不可靠</strong>：<code>small</code> 層級把「力積電／南亞科／友達／富喬」整個漏識，需要 2b 名稱修復；字幕頻道則沒有這個問題（人工字幕有標點、專有名詞正確）。→ 有字幕的頻道邊際價值高於繼續 ASR。</li>
+<li><strong>逐句抽取會把規則切爛</strong>：「就不是我們會進場追高的地方」這種反向語意、以及「昨天不要追」這種指稱前文的片段，都要在 ±150 字視窗＋距離衰減下判讀；即便如此仍只有 ≈36% 精確度。</li>
+<li><strong>沙盒裡的背景行程會被回收</strong>：長時間的 ASR／抓取要用前台 exec ＋ 輪詢，不能 <code>nohup &amp;</code>。</li>
+<li><strong><code>pkill -f step6</code> 會自我匹配到沙盒 wrapper</strong>，要用 <code>pkill -f '[s]tep6'</code>。</li>
+<li><strong>cluster bootstrap 要按日期（或 股票×月份）分群</strong>：同一天的喊單共用同一個市場結果，按筆數 bootstrap 會讓信賴區間假狹窄。</li>
+</ol>
+<h2>名義與合規</h2>
+<ul>
+<li>逐字稿是別人內容的轉錄，僅供個人研究；本知識庫只發布彙總統計與少量引用句，不發布逐字稿、音訊與逐筆台帳。</li>
+<li>頻道篩檢時刻意記錄行銷漏斗偏差（會員制、學員限定影片、投顧推股），因為它直接決定「公開言論的樣本是否有選擇偏差」。</li>
+</ul>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>

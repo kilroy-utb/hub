@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>進出場規則目錄 — Kilroy's Hub</title>
+  <meta name="description" content="L0–L4 規則、出現次數、原話證據、參數候選、可編碼性、明確反對、矛盾項">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --card-bg: #f5f5f5;
+      --card-fg: #1a1a1a;
+      --border: #e0e0e0;
+      --muted: #666;
+      --accent: #1976d2;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-fg: #e0e0e0;
+      --border: #2a2a2a;
+      --muted: #999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+    nav.breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    nav.breadcrumb a { color: var(--accent); text-decoration: none; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 28px; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; }
+    h1 .icon { font-size: 32px; }
+    .desc { color: var(--muted); margin: 0 0 12px 0; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .actions a {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--card-fg);
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--card-bg);
+    }
+    .actions a:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    .file-item:hover { border-color: var(--accent); }
+    .file-icon { font-size: 20px; }
+    .file-name { flex: 1; font-weight: 500; }
+    .file-meta { font-size: 12px; color: var(--muted); }
+    .file-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: var(--card-bg);
+      color: var(--card-fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  
+    /* ---- markdown 文件排版 ---- */
+    .doc { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+    .doc h1 { font-size: 2.1em; margin: 0 0 6px; letter-spacing: -.5px; }
+    .doc h2 { font-size: 1.5em; margin: 46px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .doc h3 { font-size: 1.16em; margin: 28px 0 10px; color: var(--fg); }
+    .doc h4 { font-size: 1.02em; margin: 20px 0 8px; color: var(--fg); }
+    .doc p { margin: 0 0 14px; }
+    .doc ul, .doc ol { margin: 0 0 16px; padding-left: 26px; }
+    .doc li { margin-bottom: 7px; }
+    .doc li > ul, .doc li > ol { margin-top: 7px; }
+    .doc blockquote {
+      margin: 0 0 18px; padding: 12px 16px; border-left: 4px solid var(--accent);
+      background: var(--card-bg); border-radius: 0 10px 10px 0; color: var(--muted);
+    }
+    .doc blockquote p:last-child { margin-bottom: 0; }
+    .doc hr { border: none; border-top: 1px solid var(--border); margin: 34px 0; }
+    .doc code {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-size: .88em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .doc pre {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; line-height: 1.6;
+    }
+    .doc pre code { background: none; border: none; padding: 0; font-size: .85em; }
+    .doc table {
+      width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: .92em;
+      display: block; overflow-x: auto;
+    }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--card-bg); font-weight: 700; white-space: nowrap; }
+    .doc tr:nth-child(even) td { background: rgba(128,128,128,.05); }
+    .doc a { color: var(--accent); }
+    .doc strong { font-weight: 700; }
+    .tocbox { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 30px; }
+    .tocbox h2 { margin: 0 0 10px; padding: 0; border: none; font-size: 1.05em; }
+    .tocbox ol { margin: 0; padding-left: 24px; }
+    .tocbox li { margin-bottom: 4px; font-size: .95em; }
+    .tocbox a { text-decoration: none; }
+    .tocbox a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle">🌙</button>
+  <div class="doc">
+    <nav class="breadcrumb">
+      <a href="https://kilroy-utb.github.io/hub/">← Kilroy's Hub</a> ›
+      <a href="https://kilroy-utb.github.io/hub/wiki/">Wiki 知識庫</a> ›
+      <a href="./">老王 TA 專家系統</a> ›
+      <span>進出場規則目錄</span>
+    </nav>
+<h1>進出場規則目錄（RULES_SPEC）</h1>
+<p>來源：【老王不只三分鐘】逐字稿。本檔是<strong>定義層</strong>——她說過什麼、參數候選、模糊與矛盾之處；規則引擎是<strong>執行層</strong>——其中一個參數化解釋。兩層之間刻意保留落差：spec 不凍結參數，引擎必須凍結參數才能出數字。</p>
+<p>出現次數為 685 集（2021-11-09 ～ 2026-11-20）全量統計。方向偏誤＝該規則 ±80 字內「賣/砍/停損/減碼/出場」次數減「買/進場/加碼/佈局/持有」次數，正值代表她提到這條時多在講出場。</p>
+<table>
+<thead>
+<tr>
+<th>規則層</th>
+<th>出現次數</th>
+<th>出現集數</th>
+<th>方向偏誤</th>
+<th>已編入引擎</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 突破波段高</td>
+<td>18,723</td>
+<td>591（86%）</td>
+<td>−2,094</td>
+<td>是</td>
+</tr>
+<tr>
+<td>L2 跌破均線出場</td>
+<td>14,647</td>
+<td>496（72%）</td>
+<td><strong>+784</strong></td>
+<td>是</td>
+</tr>
+<tr>
+<td>L4 籌碼（外資/投信/主力）</td>
+<td>13,877</td>
+<td>566（83%）</td>
+<td>−2,719</td>
+<td>否（缺資料）</td>
+</tr>
+<tr>
+<td>L2 月/季線</td>
+<td>8,873</td>
+<td>431（63%）</td>
+<td>−202</td>
+<td>是（判定冗餘）</td>
+</tr>
+<tr>
+<td>L4 美股/費半</td>
+<td>8,292</td>
+<td>616（90%）</td>
+<td>−546</td>
+<td>是（幾乎不 binding）</td>
+</tr>
+<tr>
+<td>L1 缺口</td>
+<td>7,407</td>
+<td>375（55%）</td>
+<td>−164</td>
+<td>是</td>
+</tr>
+<tr>
+<td>L0 一條線 = 十日均線</td>
+<td>6,445</td>
+<td>443（65%）</td>
+<td>−3</td>
+<td>是</td>
+</tr>
+<tr>
+<td>L4 大盤量能</td>
+<td>5,272</td>
+<td>498（73%）</td>
+<td>−1,361</td>
+<td>近似</td>
+</tr>
+<tr>
+<td>L2 支撐停損</td>
+<td>4,231</td>
+<td>514（75%）</td>
+<td><strong>+1,041</strong></td>
+<td>部分（未實作）</td>
+</tr>
+<tr>
+<td>L1 爆量／波段最大量</td>
+<td>4,033</td>
+<td>367（54%）</td>
+<td>−259</td>
+<td>是</td>
+</tr>
+<tr>
+<td>L1 站上短期均線</td>
+<td>3,421</td>
+<td>421（61%）</td>
+<td>−484</td>
+<td>是（判定冗餘）</td>
+</tr>
+<tr>
+<td>L4 形態標籤</td>
+<td>1,955</td>
+<td>388（57%）</td>
+<td>−220</td>
+<td>否（需關鍵幀核對）</td>
+</tr>
+<tr>
+<td>L3 漲停鎖死才可買</td>
+<td>1,631</td>
+<td>277（40%）</td>
+<td>−463</td>
+<td>近似</td>
+</tr>
+<tr>
+<td>L3 星期／日曆慣性</td>
+<td>1,011</td>
+<td>295（43%）</td>
+<td>−67</td>
+<td>否</td>
+</tr>
+<tr>
+<td>L3 處置股／分盤處置</td>
+<td>765</td>
+<td>81（12%）</td>
+<td>−37</td>
+<td>否（缺公告資料）</td>
+</tr>
+<tr>
+<td>NEG 不看單一 K 棒</td>
+<td>594</td>
+<td>191（28%）</td>
+<td>+5</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NEG 逢低／攤平（態度不一致）</td>
+<td>523</td>
+<td>178（26%）</td>
+<td>−884</td>
+<td>—</td>
+</tr>
+<tr>
+<td>L2 停利／目標價</td>
+<td>405</td>
+<td>134（20%）</td>
+<td>+33</td>
+<td>不用（她設停利僅 8 次 vs 停損 243 次，197 集樣本）</td>
+</tr>
+<tr>
+<td>L4 國安基金</td>
+<td>290</td>
+<td>42（6%）</td>
+<td>−213</td>
+<td>否（可用公告日期）</td>
+</tr>
+</tbody>
+</table>
+<h2>L0 招牌：一條線 = 十日均線</h2>
+<p>同時是出場線與買回線，是她引用頻率最高、定義最乾淨的一條。</p>
+<ul>
+<li>證據：<code>你就要看到這個十日均線||老王最常講的</code>、<code>以前只開一條線叫十字均線</code>（ASR 誤字＝十日均線）、<code>一條線往華邦電我把它砍掉</code>、<code>有站回來的十日均線再把它買回來</code></li>
+<li>參數：MA10（掃描對照 5/10/20/60）</li>
+<li>可編碼：是</li>
+</ul>
+<h2>L1 進場觸發</h2>
+<p><strong>突破波段性高</strong>（86% 的集數都出現）
+- <code>前高壓力突破才能夠海闊天空||前高壓力如果過不去→高檔震盪</code>、<code>5月以來的波段性高</code>
+- 參數候選：回看 3／6／12 個月；收盤確認；突破失敗預設＝不進場
+- 這是整套規則裡貢獻最大的一條：拿掉它，每筆超額從 +1.78% 掉到 +0.46%，回撤翻倍</p>
+<p><strong>站上三條短期均線</strong>
+- <code>必須把三條短期均線站上||才能夠重新短線翻多</code>
+- 參數候選：MA5/10/20，另一候選含 MA60
+- 注意：突破 N 個月波段高在數學上必然已在這些均線之上 → 這不是獨立條件，是同一狀態的另一種說法</p>
+<p><strong>爆量／波段最大量</strong>
+- <code>群創這裡爆了一個波段最大量 130幾萬張</code>、<code>底部第一根爆亮能不能追→絕對可以追</code>
+- 參數候選：vol ≥ k×MA20(vol)，k = 1.5/2/3；變體＝N 日內最大量（volume climax）
+- 在此 universe 拿掉它幾乎不影響結果（超額只差 0.15pp）→ 可能只在流動性差／處置股脈絡有意義，而那正是目前無法建模的部分</p>
+<p><strong>向上跳空缺口（多方／突破缺口）</strong>
+- <code>多方缺口破→反彈結束</code>、<code>持續守住多方缺口→有機會持續反彈</code>
+- 參數候選：近 G = 10/20 日內的向上跳空且未回補
+- 必須用復權序列，否則除息會製造假缺口</p>
+<h2>L2 出場／持有</h2>
+<p><strong>跌破短期均線＝賣</strong>（方向偏誤 +784，她講出场時最明確的一條）
+- <code>跌破短期的5日均線就會轉弱</code>、<code>跌破十字均線…就要把它賣掉</code></p>
+<p><strong>月／季線破＝長線出場</strong>
+- <code>月均線跟季均線千萬不能跌破||長線趨勢重要的觀察</code>
+- 參數候選：MA60（月）／MA120（季）</p>
+<p><strong>多方缺口被封閉＝反彈結束</strong>（39 次，197 集樣本）
+- <code>如果把這個多方缺口給封閉||那就是反彈結束</code></p>
+<p><strong>量縮出場（限量能型進場的逆運算）</strong>
+- <code>追完之後隔天後兩天如果快速亮縮||你要幹嘛出場</code>
+- 參數候選：進場後 2–3 日 vol &lt; 進場日 vol×0.5；尚未實作</p>
+<p><strong>支撐導向停損（不是固定百分比）</strong>
+- <code>形成了三重支撐不能跌破</code>、<code>三個支撐都跌破了||那就結束過去這一波的漲勢</code>、<code>跌到425元以下你才要賣嗎→虧損就很巨大</code>
+- 可編碼性：<strong>部分</strong>。需要人工／關鍵幀標支撐位；引擎計畫以「近 S 日低點」近似，尚未實作</p>
+<p><strong>不設獲利目標</strong>：停利 8 次 vs 停損 243 次 → 「海闊天空」＝不設目標價，只做 trailing</p>
+<h2>L3 可執行性閘門（她最少見、但对實盤最有價值的一層）</h2>
+<p><strong>未鎖漲停才可買</strong>
+- <code>能不能買→都還沒漲停||都沒鎖住||才漲半根||你絕對可以買</code>、<code>你可以買||你肯定買得到||因為沒有漲停鎖住</code>
+- 近似編法：high==low 且漲幅 ≥6.5% 視為鎖死 → 該日不可進場（回測中只影響 2 筆）</p>
+<p><strong>處置股／分盤處置期間不進場</strong>
+- <code>現在就分盤處置交易期間||你應該等到可以正常交易之後||他會爆亮出來||那時候再觀察有沒有新的買盤</code>
+- 可編碼：是，但需要交易所處置股公告資料（目前缺）</p>
+<p><strong>日曆慣性</strong>
+- <code>每個禮拜五就有漲停滿收錢</code>、<code>連續兩個禮拜五漲停滿的國巨||這個慣性到今天被打破了</code>
+- 可編碼：個股 × weekday 條件；需樣本外驗證，目前未採納</p>
+<h2>L4 狀態閘門（大盤／跨市場／籌碼）</h2>
+<ul>
+<li><strong>美股・費半均線狀態 → 台股</strong>：<code>費半是把月均線給跌破了</code>、<code>美股跌破所有短中長寧均線||接下來就是持續往下走</code>。用 ^IXIC、^SOX 的 close vs MA5/10/20/60 可編；在目前的 24 檔 universe 裡幾乎不 binding（全部樣板日都已是多頭）。</li>
+<li><strong>大盤量能</strong>：<code>幾乎是一兆金額的成交量</code>。需加權指數成交值；目前以 0050.TW 成交量近似。</li>
+<li><strong>籌碼外資／投信</strong>（自營僅 1 次）：賣超是她的隱性利空前提。需證交所每日買賣超，尚未接入 → 這是目前最大的一塊未建模規則。</li>
+<li><strong>國安基金</strong>：她的 calibrated 主張是 <code>國安基金宣布進場的時候反彈||就一天</code>。可用公告日期編碼，尚未測試。</li>
+<li><strong>形態標籤</strong>：<code>四海游龍的多方型態</code>、<code>三陽開胎的多方型態</code>。字面可能是 ASR 誤讀，需章節標題／關鍵幀核對後才可編碼。</li>
+</ul>
+<h2>她明確反對的事（負向規則）</h2>
+<ul>
+<li>不看單一 K 棒：<code>我們沒有人在看單一K棒的</code>、<code>不要再看什麼單一K棒了||那都是日常的波動</code></li>
+<li>不用固定百分比停損、不用停利出場</li>
+<li>不逢低承接（197 集樣本僅 15 次且多為條件式；685 集統計顯示這類語言的比例逐年下降，出話率比值 0.46）</li>
+<li>形態未破壞不賣：<code>你看形態就不用賣||他沒跌破就對了||他在高檔橫盤而已</code></li>
+<li>持有規則取決於資金屬性：<code>0050 你先想好||它是你用長線的資金去買的</code> → 系統需要持有期參數，不能一套參數跑所有商品</li>
+</ul>
+<h2>矛盾與待人工裁決</h2>
+<ul>
+<li><code>這就是一個加碼攤平的好位置</code>（正面）vs 把「加碼攤平」當散戶缺點（負面）→ 前後矛盾或 ASR 誤讀，暫不入規則</li>
+<li>「三條短期均線」的具體組合未定義 → 交給參數掃描讓資料表態</li>
+<li>「爆大量」沒有倍數門檻 → k 掃描</li>
+</ul>
+<h2>引擎對應（已實作／未實作）</h2>
+<p>已實作（可開關）：<code>hh</code> 突破波段高、<code>k</code> 爆量倍數、<code>ma_short</code> 站上短均線、<code>ma_exit</code> 一條線出場、<code>max_hold</code> 時間出場（對照組）、<code>gap_window</code>＋<code>use_gap</code> 缺口未回補、<code>ma_long</code>＋<code>use_long_ma</code> 月/季線、<code>us_ma</code>＋<code>use_us_gate</code> 美股/費半閘門、<code>lock_filter</code> 漲停鎖死不可成交。</p>
+<p>已實作但數學冗餘：<code>use_ma_align</code>、<code>use_long_ma</code>（在 <code>use_breakout</code> 成立時必然成立，回測結果相同）。</p>
+<p>尚未實作：量縮出場、支撐導向停損、處置股／分盤處置不可進場、外資・投信連買賣超、國安基金護盤狀態、weekday 漲停慣性、加碼（pyramiding）與部位大小、情境／機率輸出（引擎只輸出方向訊號）。</p>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const saved = localStorage.getItem('hub-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const sync = () => btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      sync();
+      btn.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('hub-theme', next);
+        sync();
+      });
+    })();
+  </script>
+</body>
+</html>
